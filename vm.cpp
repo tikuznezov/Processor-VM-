@@ -1,17 +1,16 @@
 typedef double stack_elem;
 #define PRINT_ELEM_T(x) printf("%lg", x);
+#define ANSW(answ) PGREEN printf("\n\nAnswer: "); PRINT_ELEM_T(answ); printf(";\n");
 
 // #define _DEBUG
 
 #include "vm.h"
 #include "log.cpp"
-#include "/Applications/Vs code/Steck/stack.h"
-#include "/Applications/Vs code/Steck/debug.h"
-#include "/Applications/Vs code/Steck/stack.cpp"
-#include "/Applications/Vs code/Steck/stack_debug.cpp"
+#include "/Applications/VsСode/Stack/stack.h"
+#include "/Applications/VsСode/Stack/debug.h"
+#include "/Applications/VsСode/Stack/stack.cpp"
+#include "/Applications/VsСode/Stack/stack_debug.cpp"
 
-
-const size_t BUF_SIZE = 1000;
 
 // считывает все в указанный буфер
 int ReadBinFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
@@ -85,7 +84,7 @@ stack_elem RunBin(const int *code, const size_t sizeof_buffer)
                     stack_elem temp1 = StackPop(&stack);
                     stack_elem temp2 = StackPop(&stack);
                     StackPush(&stack, temp1 + temp2);
-                    PR("* ADD\n");
+                    PR("* ADD");
                 }
                 else
                 {
