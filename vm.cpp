@@ -1,9 +1,3 @@
-typedef double stack_elem;
-#define PRINT_ELEM_T(x) printf("%lg", x);
-#define ANSW(answ) PGREEN printf("\n\nAnswer: "); PRINT_ELEM_T(answ); printf(";\n");
-
-// #define _DEBUG
-
 #include "vm.h"
 #include "log.cpp"
 #include "/Applications/VsСode/Stack/stack.h"
@@ -13,6 +7,7 @@ typedef double stack_elem;
 
 
 // считывает все в указанный буфер
+// читает аргументы и команды в массив интов
 int ReadBinFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
 {
     PR_FST;
@@ -58,120 +53,175 @@ int ReadBinFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
 // группа функций соотв номерам команд
 
 // выполняет бинарный файл
-stack_elem RunBin(const int *code, const size_t sizeof_buffer)
+stack_elem RunBin(Processor proc)
 {
     PR_FST;
-    size_t buf_index = 0;
 
-    Stack_t stack = {};
-    StackCtor(&stack, 2);
+    StackCtor(&(proc.stack), 2);
 
-    while (buf_index < sizeof_buffer)
+    // проход по массиву с кодом по индексу ip/pc
+
+    int count_inst_calls = 0;
+
+    while ((proc.pc < proc.code_size) && (count_inst_calls <= MAX_INSTRUCTION_CALLS))
     {
-        switch (code[buf_index])
-        {
-            case PUSH:
-            {
-                buf_index++;
-                StackPush(&stack, code[buf_index]);
-                PR("* PUSH(%d)\n", code[buf_index]);
-                break;
-            }
-            case ADD:
-            {
-                if (stack.size >= 2)
-                {
-                    stack_elem temp1 = StackPop(&stack);
-                    stack_elem temp2 = StackPop(&stack);
-                    StackPush(&stack, temp1 + temp2);
-                    PR("* ADD");
-                }
-                else
-                {
-                    PR("--> Try to ADD empty stack!\n");
-                }
-                break;
-            }
-            case DIV:
-            {
-                if (stack.size >= 2)
-                {
-                    stack_elem temp1 = StackPop(&stack);
-                    stack_elem temp2 = StackPop(&stack);
-                    StackPush(&stack, temp2 / temp1);
-                    PR("* DIV:\n");
-                }
-                else
-                {
-                    PR("--> Try to DIV empty stack!\n");
-                }
-                break;
-            }
-            case OUT:
-            {
-                PR("* OUT\n");
-                printf("Result = ");
-                stack_elem temp1 = StackPop(&stack);
-                StackPush(&stack, temp1);
-                PRINT_ELEM_T(temp1);
-                printf(";\n");
-                break;
-            }
-            case HLT:
-            {
-                PR("* HLT\n");
-                break;
-            }
-            case SUB:
-            {
-                if (stack.size >= 2)
-                {
-                    stack_elem temp1 = StackPop(&stack);
-                    stack_elem temp2 = StackPop(&stack);
-                    StackPush(&stack, temp2 - temp1);
-                    PR("* SUB\n");
-                }
-                else
-                {
-                    PR("--> Try to SUB empty stack!\n");
-                }
-                break;
-            }
+        count_inst_calls++;
+        PR("* RUN pc = (%zu)\n", proc.pc);
 
-            default:
-            {
-                printf("--> Unknown instruction!\n");
-            }
+        for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
+        {
+            if (proc.code[proc.pc] == ((Instructions[i]).num))
+                (Instructions[i]).execute(&proc);
         }
-        buf_index++;
     }
 
+    if (count_inst_calls >= MAX_INSTRUCTION_CALLS)
+    {
+        PRED;
+        PR("--> The maximum number of instruction calls has been exceeded!!!\n")
+        DEF_COL;
+    }
+
+    // TODO функция, которая производит бинарный поиск по массиву структур и выбирает нужную команду в цикле
+    // она же увеличивает индекс команды на 1 после выполнения. Таким образом джамп впишет нужный индекс и процессор перескочит назад.
 
     PR_FED;
-    return StackPop(&stack);
+    return 0;
 }
 
 
 
 
+// FIXME функции должны обрабатывать после себя такое количество аргументов, сколько ими предусмотрено и возвращать 
+// указатель на следующую инструкцию 
 
+int InstUNKNOWN(Processor *proc)
+{
+    printf("--> Unknown instruction!\n");
+    return 1;
+}
+int InstPUSH (Processor *proc)
+{
+    PR_FST;
 
+    proc->pc++;
+    StackPush(&(proc->stack), proc->code[proc->pc]);
+    PR("* PUSH(%d)\n", proc->code[proc->pc]);
+    proc->pc++;
 
+    PR_FED;
+    return 0;
+}
+int InstPOP  (Processor *proc)
+{
+    PR_FST;
+    if (proc->stack.size > 0)
+    {
+        StackPop(&(proc->stack));
+        PR("* POP(%d)\n", proc->code[proc->pc]);
+        proc->pc++;
+        PR("* Next instuction code = %zu.\n", proc->pc);
+    }
+    else
+    {
+        PR("--> Try to POP empty stack!\n");
+        return 1;
+    }
+    PR_FED;
+    return 0;
+}
+int InstPOPr (Processor *proc)
+{
+    PR_FED;
+    return 0;
+}
+int InstPUSHr(Processor *proc)
+{
+    PR_FED;
+    return 0;
+}
+int InstJMP  (Processor *proc)
+{
+    PR_FED;
+    return 0;
+}
+int InstADD  (Processor *proc)
+{
+    if (proc->stack.size >= 2)
+    {
+        StackPush(&(proc->stack), StackPop(&(proc->stack)) + StackPop(&(proc->stack)));
+        PR("* ADD");
+        proc->pc++;
+    }
+    else
+    {
+        PR("--> Try to ADD empty stack!\n");
+        return 1;
+    }
+    PR_FED;
+    return 0;
+}
+int InstSUB  (Processor *proc)
+{
+    if (proc->stack.size >= 2)
+    {
+        StackPush(&(proc->stack), 0 - StackPop(&(proc->stack)) + StackPop(&(proc->stack)));
+        PR("* SUB\n");
+        proc->pc++;
+    }
+    else
+    {
+        PR("--> Try to SUB empty stack!\n");
+        return 1;
+    }
+    PR_FED;
+    return 0;
+}
+int InstMUL  (Processor *proc)
+{
+    PR_FED;
+    return 0;
+}
+int InstDIV  (Processor *proc)
+{
+    if (proc->stack.size >= 2)
+    {
+        StackPush(&(proc->stack), 1 / StackPop(&(proc->stack)) * StackPop(&(proc->stack)));
+        PR("* DIV:\n");
+        proc->pc++;
+    }
+    else
+    {
+        PR("--> Try to DIV empty stack!\n");
+        return 1;
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    PR_FED;
+    return 0;
+}
+int InstOUT  (Processor *proc)
+{
+    PR_FST
+    if (proc->stack.size > 0)
+    {
+        PR("* OUT\n");
+        printf("Result = ");
+        PRINT_ELEM_T(StackPop(&(proc->stack)));
+        printf(";\n");
+        proc->pc++;
+    }
+    else
+    {
+        PR("--> Try to OUT empty stack!\n");
+        return 1;
+    }
+    PR_FED
+    return 0;
+}
+int InstHLT  (Processor *proc)
+{
+    PR_FST;
+    proc->pc++;
+    PR_FED;
+    return 1;
+}

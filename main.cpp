@@ -3,13 +3,10 @@
 
 int main(int argc, char *argv[])
 {
-    int *buf = NULL;
-    size_t buf_size = 0;
+    Processor proc = {};
 
-    ReadBinFile("com1.txt", &buf, &buf_size);
-    stack_elem answ = RunBin(buf, buf_size);
-
-    ANSW(answ);
+    ReadBinFile("com1.txt", &(proc.code), &(proc.code_size));
+    RunBin(proc);
 
     return 0;
 }
