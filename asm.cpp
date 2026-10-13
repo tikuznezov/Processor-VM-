@@ -2,19 +2,8 @@
 #include "asm.h"
 
 #include "log.cpp"
+#include "vm.cpp"
 #include "/Applications/VsСode/Onegin/fileread.cpp"
-
-    // open file input
-    // open file output
-
-    // for lines in file 
-    //     read line 
-    //     transcribe command 
-    //     if () get command
-
-    //     write to output
-
-    // close files
 
 
 /*
@@ -32,42 +21,106 @@ int main(void)
 {
     const char * const src_name = "src1.txt";
     const char *out_name = "com1.txt";
-    // FILE *CodeSrc = fopen(src_name, "r");
-    FILE *code_out = fopen(out_name, "w");
 
     File src = ReadSringsFromFile("src1.txt");
 
-    // printf("len = %zu\n", StrLen("lol"));
+    int labels[LABELS_COUNT] = {};
+    for (int i = 0; i < LABELS_COUNT; i++)
+        labels[i] = -1;
 
-    // int cmd = GetCommand("PUSH");
-    // printf("com = %d\n", cmd);
 
-    int cur_com = UNKNOWN;
-    for (size_t i = 0; i <= src.str_count; i++)
+    for (int a = 0; a < 2; a++)
     {
-        cur_com = GetCommand(src.str_pointers[i].beg);
-        printf("current command[%3zu] = %d;\n", i+1, cur_com);
-        fprintf(code_out, "%d", cur_com);
+        FILE *code_out = fopen(out_name, "w");
+        Instruction cur_com = Instructions[0];
+        int label = -1;
+        int cur_com_num = 0;
+        char temp_name[MAX_COM_LEN] = "";
+        int  arg1 = 0;
+        int count_read_el = 0;
 
-        if (cur_com == PUSH)
+        getchar();
+        for (size_t i = 0; i <= src.str_count; i++)
         {
-            int argument = GetValue(src.str_pointers[i].beg);
-            if (argument == UNREAD_VAL)
+
+            label = -1;
+            arg1 = 0;
+
+            char *str_beg = src.str_pointers[i].beg;
+
+            if (str_beg[0] == '\n' || str_beg[0] == ' ')
+                continue;
+
+            if (str_beg[0] == ':')
             {
-                return UNREAD_VAL;
+                PRED
+                PR("* Find label on %zu string.\n", i);
+                sscanf(str_beg, ":%d", &label);
+                PR("*Label[%d] = <%d>\n", label, cur_com_num);
+                labels[label] = cur_com_num;
+                DEF_COL;
+                continue;
             }
-            fprintf(code_out, " %d", argument);
-            PR("* Get value = %d;\n", argument);
+
+            count_read_el = sscanf(str_beg, "%s %d\n", temp_name, &arg1);
+            PGREEN PR("* Current command = <%s>, count_read_el = %2d, arg = %4d.\n", temp_name, count_read_el, arg1); DEF_COL
+            cur_com = GetCom2(temp_name);
+            // printf("Read command[%3zu] = %d;\n", i, cur_com);
+
+            if (cur_com.name[0] == 'J')
+            {
+                str_beg+=2;
+                if (sscanf(str_beg, " :%d\n", &arg1))
+                {
+                    PRED PR("fprintf <%d %d>\n", cur_com.num, labels[arg1]); DEF_COL
+                    fprintf(code_out, "%d %d\n", cur_com.num, labels[arg1]);
+                }
+                else if (sscanf(str_beg, " %d\n", &arg1))
+                {
+                    PBLUE PR("fprintf <%d %d>\n", cur_com.num, arg1); DEF_COL
+                    fprintf(code_out, "%d %d\n", cur_com.num, arg1);
+                }
+                cur_com_num+=2;
+                continue;
+            }
+
+            if (count_read_el == 1)
+            {
+                PYELLOW PR("fprintf <%d>\n", cur_com.num); DEF_COL
+                fprintf(code_out, "%d\n", cur_com.num);
+                cur_com_num++;
+            }
+            else if (count_read_el == 2)
+            {
+                PYELLOW PR("fprintf <%d %d>\n", cur_com.num, arg1); DEF_COL
+                fprintf(code_out, "%d %d\n", cur_com.num, arg1);
+                cur_com_num+=2;
+            }
         }
-        fprintf(code_out, "\n");
     }
-
-
 
     return 0;
 }
 
 
+Instruction GetCom2(const char *command)
+{
+    PR_FST;
+
+    int len = StrLen(command);
+    PR("* Current command <%4s>\n", command);
+    for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
+    {
+        if (len == StrLen(Instructions[i].name) && (!strncmp(command, Instructions[i].name, len)))
+        {
+            PR("* get command <%s>\n", Instructions[i].name);
+            PR_FED;
+            return Instructions[i];
+        }
+    }
+    PR_FED;
+    return Instructions[0];
+}
 
 
 int GetCommand(const char *str)
