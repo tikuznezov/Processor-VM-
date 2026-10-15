@@ -5,6 +5,8 @@
 #include "vm.cpp"
 #include "/Applications/VsСode/Onegin/fileread.cpp"
 
+#define TO_STR(x) #x
+
 
 /*
 1) считываем команду
@@ -21,10 +23,11 @@ git clone git@github.com:tikuznezov/Processor-VM-.git
 
 int main(void)
 {
-    const char * const src_name = "src1.txt";
-    const char *out_name = "com1.txt";
+    const char * const src_name = "src1.asm";
+    const char *out_name     = "com1.txt";
+    const char *out_bun_name = "code.bin";
 
-    File src = ReadSringsFromFile("src1.txt");
+    File src = ReadSringsFromFile(src_name);
 
     int labels[LABELS_COUNT] = {};
     for (int i = 0; i < LABELS_COUNT; i++)
@@ -34,6 +37,11 @@ int main(void)
     for (int a = 0; a < 2; a++)
     {
         FILE *code_out = fopen(out_name, "w");
+
+        int bin_out = open(out_bun_name, O_TRUNC | O_CREAT | O_WRONLY, 0755);
+
+        PR("* Files created.\n");
+
         Instruction cur_com = Instructions[0];
         int label = -1;
         int cur_com_num = 0;
@@ -41,7 +49,9 @@ int main(void)
         int  arg1 = 0;
         int count_read_el = 0;
 
+        printf("Press ENTER to continue...");
         getchar();
+
         for (size_t i = 0; i <= src.str_count; i++)
         {
 
@@ -76,11 +86,14 @@ int main(void)
                 {
                     PRED PR("fprintf <%d %d>\n", cur_com.num, labels[arg1]); DEF_COL
                     fprintf(code_out, "%d %d\n", cur_com.num, labels[arg1]);
+                    write(bin_out, &(cur_com.num), sizeof(cur_com.num));
+                    write(bin_out, &(labels[arg1]), sizeof(labels[arg1]));
                 }
                 else if (sscanf(str_beg, " %d\n", &arg1))
                 {
                     PBLUE PR("fprintf <%d %d>\n", cur_com.num, arg1); DEF_COL
                     fprintf(code_out, "%d %d\n", cur_com.num, arg1);
+                    write(bin_out, &(cur_com.num), sizeof(cur_com.num));
                 }
                 cur_com_num+=2;
                 continue;
@@ -90,12 +103,15 @@ int main(void)
             {
                 PYELLOW PR("fprintf <%d>\n", cur_com.num); DEF_COL
                 fprintf(code_out, "%d\n", cur_com.num);
+                write(bin_out, &(cur_com.num), sizeof(cur_com.num));
                 cur_com_num++;
             }
             else if (count_read_el == 2)
             {
                 PYELLOW PR("fprintf <%d %d>\n", cur_com.num, arg1); DEF_COL
                 fprintf(code_out, "%d %d\n", cur_com.num, arg1);
+                write(bin_out, &(cur_com.num), sizeof(cur_com.num));
+                write(bin_out, &(arg1), sizeof(arg1));
                 cur_com_num+=2;
             }
         }
