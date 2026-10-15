@@ -12,8 +12,8 @@ const int   LABELS_COUNT = 20;
 
 size_t StrLen(const char *str);
 
-int GetCommand(const char *str);
+int GetCommandV1(const char *str);
 
 int GetValue(const char *str);
 
-Instruction GetCom2(const char *command);
+Instruction GetCommand(const char *command);

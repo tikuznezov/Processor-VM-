@@ -7,7 +7,7 @@
 
 // считывает все в указанный буфер
 // читает аргументы и команды в массив интов
-int ReadBinFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
+int ReadTxtFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
 {
     PR_FST;
     FILE *Code = fopen(filename, "r");
@@ -49,6 +49,34 @@ int ReadBinFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
     return 0;
 }
 
+int ReadBinFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
+{
+    PR_FST;
+
+    int src_file = open(filename, O_RDONLY);
+
+    size_t buf_size = SizeofFile(filename);
+    PR("* starting calloc...\n");
+    int *buffer = (int *) calloc(buf_size, sizeof(char));
+    if (buffer == NULL)
+    {
+        printf("--> Buffer creation error (calloc error)!\n");
+    }
+    PR("* calloc comp\n");
+
+    ssize_t read_bite_count = read(src_file, buffer, buf_size);
+
+    *sizeof_buffer = buf_size / sizeof(int);
+    *buffer_p = buffer;
+
+    for (int i = 0; i < *sizeof_buffer; i++)
+    {
+        PR("[%d] ", (buffer)[i]);
+    }
+
+    PR_FED;
+    return 0;
+}
 // группа функций соотв номерам команд
 
 // выполняет бинарный файл
@@ -411,3 +439,28 @@ void PrintErrorCode(int err_code)
             break;
     }
 }
+
+
+
+size_t SizeofFile(const char *file_name)
+{
+    PR_FST;
+    assert(file_name);
+
+    struct stat statistics = {};
+    ssize_t fsize = -1;
+
+    if (stat(file_name, &statistics) == 0)
+    {
+        fsize = (ssize_t)statistics.st_size;
+        PR("Размер файла: %zu байт\n", (long)fsize);
+    }
+    else 
+    {
+        perror("Ошибка при вызове stat");
+    }
+
+    PR_FED;
+    return fsize;
+}
+

@@ -21,6 +21,9 @@
 git clone git@github.com:tikuznezov/Processor-VM-.git
 */
 
+// TODO cut to func
+// TODO bin file info
+
 int main(void)
 {
     const char * const src_name = "src1.asm";
@@ -76,7 +79,7 @@ int main(void)
 
             count_read_el = sscanf(str_beg, "%s %d\n", temp_name, &arg1);
             PGREEN PR("* Current command = <%s>, count_read_el = %2d, arg = %4d.\n", temp_name, count_read_el, arg1); DEF_COL
-            cur_com = GetCom2(temp_name);
+            cur_com = GetCommand(temp_name);
             // printf("Read command[%3zu] = %d;\n", i, cur_com);
 
             if (cur_com.name[0] == 'J')
@@ -121,7 +124,7 @@ int main(void)
 }
 
 
-Instruction GetCom2(const char *command)
+Instruction GetCommand(const char *command)
 {
     PR_FST;
 
@@ -141,7 +144,7 @@ Instruction GetCom2(const char *command)
 }
 
 
-int GetCommand(const char *str)
+int GetCommandV1(const char *str)
 {
     PR_FST
 
