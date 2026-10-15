@@ -1,5 +1,5 @@
-PUSH 0
-POPr 1
+IN
+POPr 2
 
 :2
 PUSH 100
@@ -15,7 +15,7 @@ ADD
 POPr 1
 
 PUSHr 1
-PUSH 7
-JA :2
+PUSHr 2
+JNE :2
 
 HLT

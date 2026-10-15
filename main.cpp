@@ -7,6 +7,7 @@ int main(int argc, char *argv[])
     Processor proc = {};
 
     ReadBinFile("code.bin", &(proc.code), &(proc.code_size));
+    // ReadTxtFile("com1.txt", &(proc.code), &(proc.code_size));
     err = RunBin(proc);
 
     if (err != 0)

@@ -84,19 +84,28 @@ int main(void)
 
             if (cur_com.name[0] == 'J')
             {
-                str_beg+=2;
-                if (sscanf(str_beg, " :%d\n", &arg1))
+                PRED PR("Find JMP\n"); DEF_COL;
+                PR("\"%s\"\n", cur_com.name);
+                char com[20] = "";
+                int arg = -1;
+                PR("Current string [%s] = <%d>\n", com, arg);
+                if ((2 == sscanf(str_beg, "%s :%d", com, &arg)) && (arg != -1))
                 {
-                    PRED PR("fprintf <%d %d>\n", cur_com.num, labels[arg1]); DEF_COL
-                    fprintf(code_out, "%d %d\n", cur_com.num, labels[arg1]);
+                    PR("<%s to %d>\n", cur_com.name, arg);
+                    fprintf(code_out, "%d %d\n", cur_com.num, labels[arg]);
                     write(bin_out, &(cur_com.num), sizeof(cur_com.num));
-                    write(bin_out, &(labels[arg1]), sizeof(labels[arg1]));
+                    write(bin_out, (&labels[arg]), sizeof(int));
                 }
-                else if (sscanf(str_beg, " %d\n", &arg1))
+                else if ((2 == sscanf(str_beg, "%s %d", com, &arg)) && (arg != -1))
                 {
-                    PBLUE PR("fprintf <%d %d>\n", cur_com.num, arg1); DEF_COL
-                    fprintf(code_out, "%d %d\n", cur_com.num, arg1);
+                    PR("<%s to %d>\n", cur_com.name, arg);
+                    fprintf(code_out, "%d %d\n", cur_com.num, labels[arg]);
                     write(bin_out, &(cur_com.num), sizeof(cur_com.num));
+                    write(bin_out, (&labels[arg]), sizeof(int));
+                }
+                else
+                {
+                    PRED PR("Error: label not found\n") DEF_COL;
                 }
                 cur_com_num+=2;
                 continue;
@@ -234,3 +243,4 @@ int GetValue(const char *str)
     PR_FED;
     return value;
 }
+

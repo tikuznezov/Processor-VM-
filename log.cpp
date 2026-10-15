@@ -11,7 +11,7 @@ FILE *const log_file = fopen(LOG_FILE_NAME, "w");
                             printf("----------------------------------------------------------------------------------\n"); \
                             printf("- RUN %s:\n\n", __FUNCTION__);}
 #define PR_FED if (_PRT) {\
-                            printf("\n- END %s;\n", __FUNCTION__);                                                          \
+                            printf("\n- END %s;\n", __FUNCTION__); getchar();                                                          \
                             printf("----------------------------------------------------------------------------------\n");}
 
 #define LOG(name, ...)  fprintf(log_file, name, ## __VA_ARGS__);

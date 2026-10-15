@@ -3,6 +3,7 @@
 
 typedef double stack_elem;
 #define PRINT_ELEM_T(x) printf("%lg", x);
+#define SCANF_ELEM_T(x) scanf("%lg", &x);
 
 #define _PRT 1 //   zero is off \ other is on
 #define CRUSH_BIN NAN
@@ -48,7 +49,10 @@ enum COMMANDS
     MUL,
     DIV,
     OUT,
-    HLT
+    HLT,
+    IN,
+    CALL,
+    RET
 };
 
 enum ERR_CODES
@@ -73,6 +77,7 @@ struct Processor
     int *code;
     size_t code_size;
     Stack_t stack;
+    Stack_t ret_address;
     size_t pc;
     int reg[4];
 };
@@ -108,8 +113,13 @@ int InstMUL  (Processor *proc);
 int InstDIV  (Processor *proc);
 int InstOUT  (Processor *proc);
 int InstHLT  (Processor *proc);
+int InstIN   (Processor *proc);
+int InstCALL (Processor *proc);
+int InstRET  (Processor *proc);
 
 size_t SizeofFile(const char *file_name);
+
+void PR_PROC (Processor *proc);
 
 
 // CONSTANTS
@@ -135,9 +145,12 @@ const Instruction Instructions[] =
     {.name = "MUL",   .num = MUL,   .execute = InstMUL  },
     {.name = "DIV",   .num = DIV,   .execute = InstDIV  },
     {.name = "OUT",   .num = OUT,   .execute = InstOUT  },
-    {.name = "HLT",   .num = HLT,   .execute = InstHLT  }
+    {.name = "HLT",   .num = HLT,   .execute = InstHLT  },
+    {.name = "IN",    .num = IN,    .execute = InstIN   },
+    // {.name = "CALL",  .num = CALL,  .execute = InstCALL },
+    // {.name = "RET",   .num = RET,   .execute = InstRET  }
 };
-const int COUNT_OF_INSTRUCTIONS = sizeof(Instructions);
+const int COUNT_OF_INSTRUCTIONS = sizeof(Instructions) / sizeof(Instruction);
 
 
 const size_t BUF_SIZE = 1000;

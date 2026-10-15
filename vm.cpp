@@ -5,6 +5,8 @@
 #include "/Applications/VsСode/Stack/stack.cpp"
 #include "/Applications/VsСode/Stack/stack_debug.cpp"
 
+int error = 0;
+
 // считывает все в указанный буфер
 // читает аргументы и команды в массив интов
 int ReadTxtFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
@@ -95,7 +97,6 @@ int RunBin(Processor proc)
     while ((proc.pc < proc.code_size) && (count_inst_calls <= MAX_INSTRUCTION_CALLS))
     {
         count_inst_calls++;
-        PYELLOW PR("* RUN pc = (%zu)\n", proc.pc); DEF_COL
 
         for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
         {
@@ -135,6 +136,8 @@ int InstPUSH (Processor *proc)
 {
     PR_FST;
 
+    PR_PROC(proc);
+
     proc->pc++;
     StackPush(&(proc->stack), proc->code[proc->pc]);
     PR("* PUSH(%d)\n", proc->code[proc->pc]);
@@ -146,6 +149,8 @@ int InstPUSH (Processor *proc)
 int InstPOP  (Processor *proc)
 {
     PR_FST;
+
+    PR_PROC(proc);
 
     if (proc->stack.size > 0)
     {
@@ -166,6 +171,7 @@ int InstPOP  (Processor *proc)
 int InstPOPr (Processor *proc)
 {
     PR_FST;
+    PR_PROC(proc);
 
     if ((proc->stack.size > 0))
     {
@@ -197,6 +203,8 @@ int InstPUSHr(Processor *proc)
 {
     PR_FST;
 
+    PR_PROC(proc);
+
     StackPush(&(proc->stack), proc->reg[proc->code[proc->pc + 1] - 1]);
     PR("* PUSHr(%d)\n", proc->reg[proc->code[proc->pc + 1] - 1]);
     proc->pc++;
@@ -207,6 +215,8 @@ int InstPUSHr(Processor *proc)
 }
 int InstADD  (Processor *proc) // FIXME temp
 {
+    PR_FST;
+    PR_PROC(proc);
     if (proc->stack.size >= 2)
     {
         StackPush(&(proc->stack), StackPop(&(proc->stack)) + StackPop(&(proc->stack)));
@@ -223,6 +233,8 @@ int InstADD  (Processor *proc) // FIXME temp
 }
 int InstSUB  (Processor *proc)
 {
+    PR_FST;
+    PR_PROC(proc);
     if (proc->stack.size >= 2)
     {
         StackPush(&(proc->stack), 0 - StackPop(&(proc->stack)) + StackPop(&(proc->stack)));
@@ -239,6 +251,8 @@ int InstSUB  (Processor *proc)
 }
 int InstMUL  (Processor *proc)
 {
+    PR_FST
+    PR_PROC(proc);
     if (proc->stack.size >= 2)
     {
         StackPush(&(proc->stack), StackPop(&(proc->stack)) * StackPop(&(proc->stack)));
@@ -256,6 +270,8 @@ int InstMUL  (Processor *proc)
 }
 int InstDIV  (Processor *proc)
 {
+    PR_FST;
+    PR_PROC(proc);
     if (proc->stack.size >= 2)
     {
         StackPush(&(proc->stack), 1 / StackPop(&(proc->stack)) * StackPop(&(proc->stack)));
@@ -274,6 +290,7 @@ int InstDIV  (Processor *proc)
 int InstOUT  (Processor *proc)
 {
     PR_FST
+    PR_PROC(proc);
     if (proc->stack.size > 0)
     {
         PR("* OUT\n");
@@ -293,11 +310,29 @@ int InstOUT  (Processor *proc)
 int InstHLT  (Processor *proc)
 {
     PR_FST;
-    proc->pc++;
+    PR_PROC(proc);
+    // proc->pc++;
     PR_FED;
     return HLT_CRUSH;
 }
+int InstIN   (Processor *proc)
+{
+    PR_FST;
+    PR_PROC(proc);
 
+    stack_elem input;
+    int ch = getchar();
+    ungetc(ch, stdin);
+    SCANF_ELEM_T(input);
+    StackPush(&(proc->stack), input);
+    PR("* IN(%d)\n", proc->code[proc->pc]);
+    proc->pc++;
+
+    PR_FED;
+    return 0;
+}
+int InstCALL (Processor *proc);
+int InstRET  (Processor *proc);
 
 
 #define JMP_AND_VER(name)                                                                   \
@@ -314,12 +349,18 @@ else                                                                            
 #define JMP_IF(cmp, name)                                                                           \
 PR_FST;                                                                                             \
 int st_size = 0;                                                                                    \
-if (((st_size = proc->stack.size) >= 2) && (StackPop(&(proc->stack)) cmp StackPop(&(proc->stack)))) \
-    {JMP_AND_VER(name);}                                                                            \
+PR_PROC(proc);                                                                                      \
+if (((st_size = proc->stack.size) >= 2))                                                            \
+{                                                                                                   \
+    stack_elem el1 = StackPop(&(proc->stack));                                                      \
+    stack_elem el2 = StackPop(&(proc->stack));                                                      \
+    PR("* " name " if (%lg " #cmp " %lg)\n", el2, el1);                                             \
+    if (el2 cmp el1) {JMP_AND_VER(name);}                                                           \
+    else {PR("* Comparison is incorrect."); proc->pc += 2;}                                         \
+}                                                                                                   \
 else                                                                                                \
 {                                                                                                   \
     if (st_size < 2) {PR("--> Try to compare empty stack in " name "!\n");}                         \
-    else {PR("* Comparison is incorrect.");}                                                        \
     proc->pc += 2;                                                                                  \
 }                                                                                                   \
 PR_FED;                                                                                             \
@@ -350,7 +391,7 @@ int InstJB   (Processor *proc)
 }
 int InstJBE  (Processor *proc)
 {
-    JMP_IF(<=, "JBE");
+    JMP_IF(!=, "JBE");
 }
 int InstJE   (Processor *proc)
 {
@@ -362,11 +403,11 @@ int InstJNE  (Processor *proc)
 }
 int InstJAE  (Processor *proc)
 {
-    JMP_IF(>, "JAE");
+    JMP_IF(>=, "JAE");
 }
 int InstJA   (Processor *proc)
 {
-    JMP_IF(>=, "JA");
+    JMP_IF(>, "JA");
 }
 
 
@@ -424,8 +465,6 @@ void PrintErrorCode(int err_code)
     }
 }
 
-
-
 size_t SizeofFile(const char *file_name)
 {
     PR_FST;
@@ -449,7 +488,33 @@ size_t SizeofFile(const char *file_name)
 }
 
 // FIXME developing...
-void PR_PROC (Processor *proc)
+void PR_PROC(Processor *proc)
 {
+    PYELLOW;
+    PR("PROCESSOR:\n");
+    PR("* RUN pc = (%zu)\n", proc->pc);
+    DEF_COL;
+    PR("Code = ");
+    for (int i = 0; i < proc->code_size; i++)
+    {
+        if (i == proc->pc) PRED;
+        PR("[%d]", proc->code[i])
+        if (i == proc->pc) DEF_COL;
+    }
+    PR("\n");
+    for (int i = 0; i < sizeof(proc->reg)/sizeof(proc->reg[0]); i++)
+        PR("Reg[%c] = %d;\n", i + 'A', proc->reg[i]);
+
+
+    PR("Stack = ");
+    for (int i = 0; i < proc->stack.size; i++)
+    {
+        PR("[%lg] ", proc->stack.data[i])
+    }
+    PR(";\n");
+
+    PYELLOW;
+    PR("PROCESSOR completed;\n")
+    DEF_COL;
     return;
 }
