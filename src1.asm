@@ -1,0 +1,21 @@
+PUSH 0
+POPr 1
+
+:2
+PUSH 100
+POPr 4
+PUSHr 4
+PUSHr 4
+MUL
+OUT
+
+PUSH 1
+PUSHr 1
+ADD
+POPr 1
+
+PUSHr 1
+PUSH 7
+JA :2
+
+HLT

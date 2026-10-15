@@ -5,17 +5,6 @@
 #include "/Applications/VsСode/Stack/stack.cpp"
 #include "/Applications/VsСode/Stack/stack_debug.cpp"
 
-#define JMP_AND_VER(name) if ((proc->code[proc->pc + 1] >= 0) && (proc->code[proc->pc + 1] < proc->code_size)) \
-                            {proc->pc = proc->code[proc->pc + 1];} \
-                          else \
-                            {PR("--> Try to " name " out of bounds!\n"); return JMP_CRUSH;}
-
-#define JMP_IF(cmp, name) int st_size = 0; if (((st_size = proc->stack.size) >= 2) && (StackPop(&(proc->stack)) cmp StackPop(&(proc->stack)))) \
-                            {JMP_AND_VER(name);} \
-                          else \
-                            {if (st_size < 2) {PR("--> Try to compare empty stack in " name "!\n");} \
-                                else {PR("* Comparison is incorrect.");} proc->pc += 2;} 
-
 // считывает все в указанный буфер
 // читает аргументы и команды в массив интов
 int ReadBinFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
@@ -188,7 +177,7 @@ int InstPUSHr(Processor *proc)
     PR_FED;
     return 0;
 }
-int InstADD  (Processor *proc)
+int InstADD  (Processor *proc) // FIXME temp
 {
     if (proc->stack.size >= 2)
     {
@@ -281,6 +270,21 @@ int InstHLT  (Processor *proc)
     return HLT_CRUSH;
 }
 
+
+
+#define JMP_AND_VER(name)                                                                       \
+    if ((proc->code[proc->pc + 1] >= 0) && (proc->code[proc->pc + 1] < proc->code_size))        \
+        {proc->pc = proc->code[proc->pc + 1];}                                                  \
+    else                                                                                        \
+        {PR("--> Try to " name " out of bounds!\n"); return JMP_CRUSH;}
+
+#define JMP_IF(cmp, name) int st_size = 0; if (((st_size = proc->stack.size) >= 2) && (StackPop(&(proc->stack)) cmp StackPop(&(proc->stack)))) \
+                            {JMP_AND_VER(name);} \
+                          else \
+                            {if (st_size < 2) {PR("--> Try to compare empty stack in " name "!\n");} \
+                                else {PR("* Comparison is incorrect.");} proc->pc += 2;} 
+
+
 int InstJMP  (Processor *proc)
 {
     PR_FST;
@@ -307,9 +311,9 @@ int InstJB   (Processor *proc)
     PR_FED;
     return 0;
 }
-int InstJBE  (Processor *proc)
+int InstJBE  (Processor *proc) // FIXME to define 
 {
-    PR_FST;
+    PR_FST; 
 
     JMP_IF(<=, "JBE");
 

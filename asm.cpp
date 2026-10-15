@@ -15,6 +15,8 @@
 
 - можно не трогать свитч, пока и так сойдет
 ! реализовать запись бинарника без разбиения на строки 
+
+git clone git@github.com:tikuznezov/Processor-VM-.git
 */
 
 int main(void)

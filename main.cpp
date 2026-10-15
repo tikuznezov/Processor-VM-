@@ -3,10 +3,19 @@
 
 int main(int argc, char *argv[])
 {
+    int err = 0;
     Processor proc = {};
 
     ReadBinFile("com1.txt", &(proc.code), &(proc.code_size));
-    RunBin(proc);
+    err = RunBin(proc);
+
+    if (err != 0)
+    {
+        if (err != HLT_CRUSH) PRED;
+        PR("* Completed 'RunBin'.\n");
+        PrintErrorCode(err);
+        DEF_COL;
+    }
 
     return 0;
 }
