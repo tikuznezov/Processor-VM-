@@ -8,10 +8,10 @@ FILE *const log_file = fopen(LOG_FILE_NAME, "w");
 
 #define PR(name, ...)  if (_PRT) {printf(name, ## __VA_ARGS__);}
 #define PR_FST if (_PRT) {\
-                            printf("----------------------------------------------------------------------------------\n");\
+                            printf("----------------------------------------------------------------------------------\n"); \
                             printf("- RUN %s:\n\n", __FUNCTION__);}
 #define PR_FED if (_PRT) {\
-                            printf("\n- END %s;\n", __FUNCTION__);\
+                            printf("\n- END %s;\n", __FUNCTION__);                                                          \
                             printf("----------------------------------------------------------------------------------\n");}
 
 #define LOG(name, ...)  fprintf(log_file, name, ## __VA_ARGS__);

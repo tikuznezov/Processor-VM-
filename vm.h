@@ -4,7 +4,7 @@
 typedef double stack_elem;
 #define PRINT_ELEM_T(x) printf("%lg", x);
 
-#define _PRT 0 //   zero is off \ other is on
+#define _PRT 1 //   zero is off \ other is on
 #define CRUSH_BIN NAN
 
 // #define _DEBUG
@@ -115,8 +115,6 @@ size_t SizeofFile(const char *file_name);
 // CONSTANTS
 //-------------------------------------------------------------------------------------------------------------------------------------------------
 
-const int COUNT_OF_INSTRUCTIONS = 18;
-
 const Instruction Instructions[] = 
 {
     {.name = "UNKNOWN", .num = UNKNOWN, .execute = InstUNKNOWN},
@@ -139,6 +137,8 @@ const Instruction Instructions[] =
     {.name = "OUT",   .num = OUT,   .execute = InstOUT  },
     {.name = "HLT",   .num = HLT,   .execute = InstHLT  }
 };
+const int COUNT_OF_INSTRUCTIONS = sizeof(Instructions);
+
 
 const size_t BUF_SIZE = 1000;
 

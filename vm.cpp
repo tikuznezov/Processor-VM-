@@ -300,89 +300,73 @@ int InstHLT  (Processor *proc)
 
 
 
-#define JMP_AND_VER(name)                                                                       \
-    if ((proc->code[proc->pc + 1] >= 0) && (proc->code[proc->pc + 1] < proc->code_size))        \
-        {proc->pc = proc->code[proc->pc + 1];}                                                  \
-    else                                                                                        \
-        {PR("--> Try to " name " out of bounds!\n"); return JMP_CRUSH;}
+#define JMP_AND_VER(name)                                                                   \
+if ((proc->code[proc->pc + 1] >= 0) && (proc->code[proc->pc + 1] < proc->code_size))        \
+{                                                                                           \
+    proc->pc = proc->code[proc->pc + 1];                                                    \
+}                                                                                           \
+else                                                                                        \
+{                                                                                           \
+    PR("--> Try to " name " out of bounds!\n");                                             \
+    return JMP_CRUSH;                                                                       \
+}
 
-#define JMP_IF(cmp, name) int st_size = 0; if (((st_size = proc->stack.size) >= 2) && (StackPop(&(proc->stack)) cmp StackPop(&(proc->stack)))) \
-                            {JMP_AND_VER(name);} \
-                          else \
-                            {if (st_size < 2) {PR("--> Try to compare empty stack in " name "!\n");} \
-                                else {PR("* Comparison is incorrect.");} proc->pc += 2;} 
+#define JMP_IF(cmp, name)                                                                           \
+PR_FST;                                                                                             \
+int st_size = 0;                                                                                    \
+if (((st_size = proc->stack.size) >= 2) && (StackPop(&(proc->stack)) cmp StackPop(&(proc->stack)))) \
+    {JMP_AND_VER(name);}                                                                            \
+else                                                                                                \
+{                                                                                                   \
+    if (st_size < 2) {PR("--> Try to compare empty stack in " name "!\n");}                         \
+    else {PR("* Comparison is incorrect.");}                                                        \
+    proc->pc += 2;                                                                                  \
+}                                                                                                   \
+PR_FED;                                                                                             \
+return 0;
 
 
 int InstJMP  (Processor *proc)
 {
-    PR_FST;
+    JMP_IF(|| 1 ||, "JMP");
+    // PR_FST;
 
-    if ((proc->code[proc->pc + 1] >= 0) && (proc->code[proc->pc + 1] < proc->code_size))
-    {
-        proc->pc = proc->code[proc->pc + 1];
-    }
-    else
-    {
-        PR("--> Try to JMP out of bounds!\n");
-        return JMP_CRUSH;
-    }
+    // if ((proc->code[proc->pc + 1] >= 0) && (proc->code[proc->pc + 1] < proc->code_size))
+    // {
+    //     proc->pc = proc->code[proc->pc + 1];
+    // }
+    // else
+    // {
+    //     PR("--> Try to JMP out of bounds!\n");
+    //     return JMP_CRUSH;
+    // }
 
-    PR_FED;
-    return 0;
+    // PR_FED;
+    // return 0;
 }
 int InstJB   (Processor *proc)
 {
-    PR_FST;
-
     JMP_IF(<, "JB");
-
-    PR_FED;
-    return 0;
 }
-int InstJBE  (Processor *proc) // FIXME to define 
+int InstJBE  (Processor *proc)
 {
-    PR_FST; 
-
     JMP_IF(<=, "JBE");
-
-    PR_FED;
-    return 0;
 }
 int InstJE   (Processor *proc)
 {
-    PR_FST;
-
     JMP_IF(==, "JE");
-
-    PR_FED;
-    return 0;
 }
 int InstJNE  (Processor *proc)
 {
-    PR_FST;
-
     JMP_IF(!=, "JNE");
-
-    PR_FED;
-    return 0;
 }
 int InstJAE  (Processor *proc)
 {
-    PR_FST;
-
     JMP_IF(>, "JAE");
-
-    PR_FED;
-    return 0;
 }
 int InstJA   (Processor *proc)
 {
-    PR_FST;
-
     JMP_IF(>=, "JA");
-
-    PR_FED;
-    return 0;
 }
 
 
@@ -464,3 +448,8 @@ size_t SizeofFile(const char *file_name)
     return fsize;
 }
 
+// FIXME developing...
+void PR_PROC (Processor *proc)
+{
+    return;
+}
