@@ -30,7 +30,7 @@ Instruction GetCommand(const char *command);
 
 bool FindLabel(char *str_beg, int *label, int *labels, int cur_com_num, size_t string_num);
 
-int AsmReadWrite(File *src, File_names fname, int repeat_count);
+int AsmReadWrite(File *src, File_names fname, int *labels);
 
 bool FindJmp(char *str_beg, int *labels, int *cur_com_num, Instruction *cur_com, FILE *txt_out, int bin_out);
 

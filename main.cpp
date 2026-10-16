@@ -1,5 +1,5 @@
-#include "log.cpp"
 #include "vm.cpp"
+#include "log.cpp"
 
 // дед будет просить поменять местами сомножетели в факториале 
 // n * f(n-1) --- f(n-1) * n
