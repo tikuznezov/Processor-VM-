@@ -5,7 +5,7 @@ typedef double stack_elem;
 #define PRINT_ELEM_T(x) printf("%lg", x);
 #define SCANF_ELEM_T(x) scanf("%lg", &x);
 
-#define _PRT 0 //   zero is off \ other is on
+#define _PRT 1 //   zero is off \ other is on
 #define CRUSH_BIN NAN
 
 // #define _DEBUG
