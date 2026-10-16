@@ -16,6 +16,12 @@ POPr 1
 
 PUSHr 1
 PUSHr 2
-JNE :2
+JB :2
 
+CALL :3
 HLT
+
+:3
+PUSH 4
+OUT
+RET

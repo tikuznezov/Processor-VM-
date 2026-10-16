@@ -1,13 +1,10 @@
 #include "vm.h"
 #include "asm.h"
-
+//------------------------------------------------------------------------------------
 #include "log.cpp"
 #include "vm.cpp"
 #include "/Applications/VsСode/Onegin/fileread.cpp"
-
-#define TO_STR(x) #x
-
-
+//------------------------------------------------------------------------------------
 /*
 1) считываем команду
 2) вторым символом считываем аргумент, обрабатываем его наличие
@@ -22,8 +19,9 @@ git clone git@github.com:tikuznezov/Processor-VM-.git
 */
 
 // TODO cut to func
-// TODO bin file info
+// COMP bin file info
 
+// TODO argc argv
 int main(void)
 {
     const char * const src_name = "src1.asm";
@@ -36,7 +34,7 @@ int main(void)
     for (int i = 0; i < LABELS_COUNT; i++)
         labels[i] = -1;
 
-
+    // FIXME cut to function
     for (int a = 0; a < 2; a++)
     {
         FILE *code_out = fopen(out_name, "w");
@@ -46,10 +44,10 @@ int main(void)
         PR("* Files created.\n");
 
         Instruction cur_com = Instructions[0];
-        int label = -1;
-        int cur_com_num = 0;
+        int label;
+        int  arg1;
         char temp_name[MAX_COM_LEN] = "";
-        int  arg1 = 0;
+        int cur_com_num = 0;
         int count_read_el = 0;
 
         printf("Press ENTER to continue...");
@@ -80,15 +78,17 @@ int main(void)
             count_read_el = sscanf(str_beg, "%s %d\n", temp_name, &arg1);
             PGREEN PR("* Current command = <%s>, count_read_el = %2d, arg = %4d.\n", temp_name, count_read_el, arg1); DEF_COL
             cur_com = GetCommand(temp_name);
-            // printf("Read command[%3zu] = %d;\n", i, cur_com);
 
-            if (cur_com.name[0] == 'J')
+
+            // FIXME cut to function
+            if ((cur_com.name[0] == 'J') || !(strncmp(cur_com.name, "CALL", 4)))
             {
                 PRED PR("Find JMP\n"); DEF_COL;
                 PR("\"%s\"\n", cur_com.name);
                 char com[20] = "";
                 int arg = -1;
                 PR("Current string [%s] = <%d>\n", com, arg);
+
                 if ((2 == sscanf(str_beg, "%s :%d", com, &arg)) && (arg != -1))
                 {
                     PR("<%s to %d>\n", cur_com.name, arg);
@@ -111,6 +111,7 @@ int main(void)
                 continue;
             }
 
+            // FIXME cut to function
             if (count_read_el == 1)
             {
                 PYELLOW PR("fprintf <%d>\n", cur_com.num); DEF_COL
@@ -132,6 +133,9 @@ int main(void)
     return 0;
 }
 
+
+// FUNCTIONS
+//------------------------------------------------------------------------------------------------------------------------------------------------
 
 Instruction GetCommand(const char *command)
 {

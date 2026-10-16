@@ -1,13 +1,16 @@
 #include "log.cpp"
 #include "vm.cpp"
 
+// дед будет просить поменять местами сомножетели в факториале 
+// n * f(n-1) --- f(n-1) * n
+
 int main(int argc, char *argv[])
 {
     int err = 0;
     Processor proc = {};
 
-    ReadBinFile("code.bin", &(proc.code), &(proc.code_size));
-    // ReadTxtFile("com1.txt", &(proc.code), &(proc.code_size));
+    // ReadBinFile("code.bin", &(proc.code), &(proc.code_size));
+    ReadTxtFile("com1.txt", &(proc.code), &(proc.code_size));
     err = RunBin(proc);
 
     if (err != 0)

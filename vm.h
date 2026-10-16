@@ -5,7 +5,7 @@ typedef double stack_elem;
 #define PRINT_ELEM_T(x) printf("%lg", x);
 #define SCANF_ELEM_T(x) scanf("%lg", &x);
 
-#define _PRT 1 //   zero is off \ other is on
+#define _PRT 0 //   zero is off \ other is on
 #define CRUSH_BIN NAN
 
 // #define _DEBUG
@@ -32,42 +32,52 @@ typedef double stack_elem;
 
 enum COMMANDS
 {
-    UNKNOWN = 0,
-    PUSH,
-    POP,
-    POPr,
-    PUSHr,
-    JMP,
-    JB,  // <
-    JBE, // <=
-    JE,  // ==
-    JNE, // !=
-    JAE, // >=
-    JA,  // >
-    ADD,
-    SUB,
-    MUL,
-    DIV,
-    OUT,
-    HLT,
-    IN,
-    CALL,
-    RET
+    UNKNOWN = 0, // 0
+    PUSH,        // 1
+    POP,         // 2
+    POPr,        // 3
+    PUSHr,       // 4
+    JMP,         // 5
+    JB,          // 6  (<)
+    JBE,         // 7  (<=)
+    JE,          // 8  (==)
+    JNE,         // 9  (!=)
+    JAE,         // 10 (>=)
+    JA,          // 11 (>)
+    ADD,         // 12
+    SUB,         // 13
+    MUL,         // 14
+    DIV,         // 15
+    OUT,         // 16
+    HLT,         // 17
+    IN,          // 18
+    CALL,        // 19
+    RET          // 20
 };
 
 enum ERR_CODES
 {
+    UNKNOWN_CRUSH,
     PUSH_CRUSH,
     POP_CRUSH,
     POPr_CRUSH,
     PUSHr_CRUSH,
     JMP_CRUSH,
+    JB_CRUSH,
+    JBE_CRUSH,
+    JE_CRUSH,
+    JNE_CRUSH,
+    JAE_CRUSH,
+    JA_CRUSH,
     ADD_CRUSH,
     SUB_CRUSH,
     MUL_CRUSH,
     DIV_CRUSH,
     OUT_CRUSH,
-    HLT_CRUSH
+    HLT_CRUSH,
+    IN_CRUSH,
+    CALL_CRUSH,
+    RET_CRUSH
 };
 
 const int REG_COUNT = 4;
@@ -79,7 +89,7 @@ struct Processor
     Stack_t stack;
     Stack_t ret_address;
     size_t pc;
-    int reg[4];
+    int reg[REG_COUNT];
 };
 
 struct Instruction
@@ -147,8 +157,8 @@ const Instruction Instructions[] =
     {.name = "OUT",   .num = OUT,   .execute = InstOUT  },
     {.name = "HLT",   .num = HLT,   .execute = InstHLT  },
     {.name = "IN",    .num = IN,    .execute = InstIN   },
-    // {.name = "CALL",  .num = CALL,  .execute = InstCALL },
-    // {.name = "RET",   .num = RET,   .execute = InstRET  }
+    {.name = "CALL",  .num = CALL,  .execute = InstCALL },
+    {.name = "RET",   .num = RET,   .execute = InstRET  }
 };
 const int COUNT_OF_INSTRUCTIONS = sizeof(Instructions) / sizeof(Instruction);
 

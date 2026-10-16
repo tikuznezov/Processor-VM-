@@ -87,6 +87,7 @@ int RunBin(Processor proc)
     PR_FST;
 
     StackCtor(&(proc.stack), 2);
+    StackCtor(&(proc.ret_address), 2);
 
     // проход по массиву с кодом по индексу ip/pc
 
@@ -121,10 +122,161 @@ int RunBin(Processor proc)
     return 0;
 }
 
+// display error codes
+void PrintErrorCode(int err_code)
+{
+    switch (err_code)
+    {
+        case UNKNOWN_CRUSH:
+            PR("--> Error: Unknown operation!\n");
+            break;
+
+        case PUSH_CRUSH:
+            PR("--> Error in PUSH!\n");
+            break;
+
+        case POP_CRUSH:
+            PR("--> Error in POP!\n");
+            break;
+
+        case POPr_CRUSH:
+            PR("--> Error in POPr!\n");
+            break;
+
+        case PUSHr_CRUSH:
+            PR("--> Error in PUSHr!\n");
+            break;
+
+        case JMP_CRUSH:
+            PR("--> Error in JMP!\n");
+            break;
+
+        case JB_CRUSH:
+            PR("--> Error in JB!\n");
+            break;
+
+        case JBE_CRUSH:
+            PR("--> Error in JBE!\n");
+            break;
+
+        case JE_CRUSH:
+            PR("--> Error in JE!\n");
+            break;
+
+        case JNE_CRUSH:
+            PR("--> Error in JNE!\n");
+            break;
+
+        case JAE_CRUSH:
+            PR("--> Error in JAE!\n");
+            break;
+
+        case JA_CRUSH:
+            PR("--> Error in JA!\n");
+            break;
+
+        case ADD_CRUSH:
+            PR("--> Error in ADD!\n");
+            break;
+
+        case SUB_CRUSH:
+            PR("--> Error in SUB!\n");
+            break;
+
+        case MUL_CRUSH:
+            PR("--> Error in MUL!\n");
+            break;
+
+        case DIV_CRUSH:
+            PR("--> Error in DIV!\n");
+            break;
+
+        case OUT_CRUSH:
+            PR("--> Error in OUT!\n");
+            break;
+
+        case HLT_CRUSH:
+            PR("* Program successfully completed.\n");
+            break;
+
+        case IN_CRUSH:
+            PR("--> Error in IN!\n");
+            break;
+
+        case CALL_CRUSH:
+            PR("--> Error in CALL!\n");
+            break;
+
+        case RET_CRUSH:
+            PR("--> Error in RET!\n");
+            break;
+
+        default:
+            PR("--> Unknown error code: %d!\n", err_code);
+            break;
+    }
+}
+
+// return file size in bites
+size_t SizeofFile(const char *file_name)
+{
+    PR_FST;
+    assert(file_name);
+
+    struct stat statistics = {};
+    ssize_t fsize = -1;
+
+    if (stat(file_name, &statistics) == 0)
+    {
+        fsize = (ssize_t)statistics.st_size;
+        PR("Размер файла: %zu байт\n", (long)fsize);
+    }
+    else 
+    {
+        perror("Ошибка при вызове stat");
+    }
+
+    PR_FED;
+    return fsize;
+}
+
+// display processor data
+void PR_PROC(Processor *proc)
+{
+    PYELLOW;
+    PR("PROCESSOR:\n");
+    PR("* RUN pc = (%zu)\n", proc->pc);
+    DEF_COL;
+    PR("Code = ");
+    for (int i = 0; i < proc->code_size; i++)
+    {
+        if (i == proc->pc) PRED;
+        PR("[%d]", proc->code[i])
+        if (i == proc->pc) DEF_COL;
+    }
+    PR("\n");
+    for (int i = 0; i < sizeof(proc->reg)/sizeof(proc->reg[0]); i++)
+        PR("Reg[%c] = %d;\n", i + 'A', proc->reg[i]);
 
 
+    PR("Stack = ");
+    for (int i = 0; i < proc->stack.size; i++)
+    {
+        PR("[%lg] ", proc->stack.data[i])
+    }
+    PR(";\n");
 
-// FIXME функции должны обрабатывать после себя такое количество аргументов, сколько ими предусмотрено и возвращать 
+    PYELLOW;
+    PR("PROCESSOR completed;\n")
+    DEF_COL;
+    return;
+}
+
+
+// PROCESSOR FUNCTIONS
+//----------------------------------------------------------------------------------------------------------------------
+
+// COMP функции должны обрабатывать после себя такое количество аргументов, сколько ими предусмотрено и возвращать 
 // указатель на следующую инструкцию 
 
 int InstUNKNOWN(Processor *proc)
@@ -321,6 +473,7 @@ int InstIN   (Processor *proc)
     PR_PROC(proc);
 
     stack_elem input;
+    printf("Called IN. Input any number: ");
     int ch = getchar();
     ungetc(ch, stdin);
     SCANF_ELEM_T(input);
@@ -331,9 +484,39 @@ int InstIN   (Processor *proc)
     PR_FED;
     return 0;
 }
-int InstCALL (Processor *proc);
-int InstRET  (Processor *proc);
+int InstCALL (Processor *proc)
+{
+    PR_FST;
+    PR_PROC(proc);
 
+    StackPush(&proc->ret_address, proc->pc + 2);
+    InstJMP(proc);
+
+    PR_FED;
+    return 0;
+}
+int InstRET  (Processor *proc)
+{
+    PR_FST;
+    PR_PROC(proc);
+
+    if (proc->ret_address.size >= 1)
+    {
+        int ret_ad = StackPop(&proc->ret_address);
+        proc->pc = ret_ad;
+    }
+    else
+    {
+        PR("--> Try POP empty stack in RET!\n");
+        return RET_CRUSH;
+    }
+
+    PR_FED;
+    return 0;
+}
+
+// JUMPS
+//--------------------------------------------------------------------------------------------------
 
 #define JMP_AND_VER(name)                                                                   \
 if ((proc->code[proc->pc + 1] >= 0) && (proc->code[proc->pc + 1] < proc->code_size))        \
@@ -346,44 +529,42 @@ else                                                                            
     return JMP_CRUSH;                                                                       \
 }
 
-#define JMP_IF(cmp, name)                                                                           \
-PR_FST;                                                                                             \
-int st_size = 0;                                                                                    \
-PR_PROC(proc);                                                                                      \
-if (((st_size = proc->stack.size) >= 2))                                                            \
-{                                                                                                   \
-    stack_elem el1 = StackPop(&(proc->stack));                                                      \
-    stack_elem el2 = StackPop(&(proc->stack));                                                      \
-    PR("* " name " if (%lg " #cmp " %lg)\n", el2, el1);                                             \
-    if (el2 cmp el1) {JMP_AND_VER(name);}                                                           \
-    else {PR("* Comparison is incorrect."); proc->pc += 2;}                                         \
-}                                                                                                   \
-else                                                                                                \
-{                                                                                                   \
-    if (st_size < 2) {PR("--> Try to compare empty stack in " name "!\n");}                         \
-    proc->pc += 2;                                                                                  \
-}                                                                                                   \
-PR_FED;                                                                                             \
+#define JMP_IF(cmp, name)                                                                   \
+PR_FST;                                                                                     \
+int st_size = 0;                                                                            \
+PR_PROC(proc);                                                                              \
+if (((st_size = proc->stack.size) >= 2))                                                    \
+{                                                                                           \
+    stack_elem el1 = StackPop(&(proc->stack));                                              \
+    stack_elem el2 = StackPop(&(proc->stack));                                              \
+    PR("* " name " if (%lg " #cmp " %lg)\n", el2, el1);                                     \
+    if (el2 cmp el1) {JMP_AND_VER(name);}                                                   \
+    else {PR("* Comparison is incorrect."); proc->pc += 2;}                                 \
+}                                                                                           \
+else                                                                                        \
+{                                                                                           \
+    if (st_size < 2) {PR("--> Try to compare empty stack in " name "!\n");}                 \
+    proc->pc += 2;                                                                          \
+}                                                                                           \
+PR_FED;                                                                                     \
 return 0;
-
 
 int InstJMP  (Processor *proc)
 {
-    JMP_IF(|| 1 ||, "JMP");
-    // PR_FST;
+    PR_FST;
 
-    // if ((proc->code[proc->pc + 1] >= 0) && (proc->code[proc->pc + 1] < proc->code_size))
-    // {
-    //     proc->pc = proc->code[proc->pc + 1];
-    // }
-    // else
-    // {
-    //     PR("--> Try to JMP out of bounds!\n");
-    //     return JMP_CRUSH;
-    // }
+    if ((proc->code[proc->pc + 1] >= 0) && (proc->code[proc->pc + 1] < proc->code_size))
+    {
+        proc->pc = proc->code[proc->pc + 1];
+    }
+    else
+    {
+        PR("--> Try to JMP out of bounds!\n");
+        return JMP_CRUSH;
+    }
 
-    // PR_FED;
-    // return 0;
+    PR_FED;
+    return 0;
 }
 int InstJB   (Processor *proc)
 {
@@ -391,7 +572,7 @@ int InstJB   (Processor *proc)
 }
 int InstJBE  (Processor *proc)
 {
-    JMP_IF(!=, "JBE");
+    JMP_IF(<=, "JBE");
 }
 int InstJE   (Processor *proc)
 {
@@ -410,111 +591,5 @@ int InstJA   (Processor *proc)
     JMP_IF(>, "JA");
 }
 
+//-----------------------------------------------------------------------------------------------------------------------
 
-void PrintErrorCode(int err_code)
-{
-    switch (err_code)
-    {
-        case PUSH_CRUSH:
-            PR("--> Error in PUSH!\n");
-            break;
-
-        case POP_CRUSH:
-            PR("--> Error in POP!\n");
-            break;
-
-        case POPr_CRUSH:
-            PR("--> Error in POPr!\n");
-            break;
-
-        case PUSHr_CRUSH:
-            PR("--> Error in PUSHr!\n");
-            break;
-
-        case JMP_CRUSH:
-            PR("--> Error in JMP!\n");
-            break;
-
-        case ADD_CRUSH:
-            PR("--> Error in ADD!\n");
-            break;
-
-        case SUB_CRUSH:
-            PR("--> Error in SUB!\n");
-            break;
-
-        case MUL_CRUSH:
-            PR("--> Error in MUL!\n");
-            break;
-
-        case DIV_CRUSH:
-            PR("--> Error in DIV!\n");
-            break;
-
-        case OUT_CRUSH:
-            PR("--> Error in OUT!\n");
-            break;
-
-        case HLT_CRUSH:
-            PR("* Program successfully completed.\n");
-            break;
-
-        default:
-            PR("--> Unknown error code: %d!\n", err_code);
-            break;
-    }
-}
-
-size_t SizeofFile(const char *file_name)
-{
-    PR_FST;
-    assert(file_name);
-
-    struct stat statistics = {};
-    ssize_t fsize = -1;
-
-    if (stat(file_name, &statistics) == 0)
-    {
-        fsize = (ssize_t)statistics.st_size;
-        PR("Размер файла: %zu байт\n", (long)fsize);
-    }
-    else 
-    {
-        perror("Ошибка при вызове stat");
-    }
-
-    PR_FED;
-    return fsize;
-}
-
-// FIXME developing...
-void PR_PROC(Processor *proc)
-{
-    PYELLOW;
-    PR("PROCESSOR:\n");
-    PR("* RUN pc = (%zu)\n", proc->pc);
-    DEF_COL;
-    PR("Code = ");
-    for (int i = 0; i < proc->code_size; i++)
-    {
-        if (i == proc->pc) PRED;
-        PR("[%d]", proc->code[i])
-        if (i == proc->pc) DEF_COL;
-    }
-    PR("\n");
-    for (int i = 0; i < sizeof(proc->reg)/sizeof(proc->reg[0]); i++)
-        PR("Reg[%c] = %d;\n", i + 'A', proc->reg[i]);
-
-
-    PR("Stack = ");
-    for (int i = 0; i < proc->stack.size; i++)
-    {
-        PR("[%lg] ", proc->stack.data[i])
-    }
-    PR(";\n");
-
-    PYELLOW;
-    PR("PROCESSOR completed;\n")
-    DEF_COL;
-    return;
-}
