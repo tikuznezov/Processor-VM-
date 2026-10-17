@@ -467,16 +467,16 @@ int InstHLT  (Processor *proc)
     PR_FED;
     return HLT_CRUSH;
 }
-int InstIN   (Processor *proc)
+int InstIN   (Processor *proc) // FIXME clean buffer
 {
     PR_FST;
     PR_PROC(proc);
 
     stack_elem input;
     printf("Called IN. Input any number: ");
-    int ch = getchar();
-    ungetc(ch, stdin);
     SCANF_ELEM_T(input);
+    ClearTerm();
+
     StackPush(&(proc->stack), input);
     PR("* IN(%d)\n", proc->code[proc->pc]);
     proc->pc++;

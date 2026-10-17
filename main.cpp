@@ -4,13 +4,17 @@
 // дед будет просить поменять местами сомножетели в факториале 
 // n * f(n-1) --- f(n-1) * n
 
+// TODO push [AX+1]
+
 int main(int argc, char *argv[])
 {
+    const char *src_bin = (argc > 1) ? argv[1] : "code.bin";
+    // const char *src_txt = (argc > 1) ? argv[1] : "code.txt";
     int err = 0;
     Processor proc = {};
 
-    // ReadBinFile("code.bin", &(proc.code), &(proc.code_size));
-    ReadTxtFile("com1.txt", &(proc.code), &(proc.code_size));
+    ReadBinFile(src_bin, &(proc.code), &(proc.code_size));
+    // ReadTxtFile(src_txt, &(proc.code), &(proc.code_size));
     err = RunBin(proc);
 
     if (err != 0)

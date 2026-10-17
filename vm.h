@@ -80,7 +80,8 @@ enum ERR_CODES
     RET_CRUSH
 };
 
-const int REG_COUNT = 4;
+const size_t REG_COUNT = 4;
+const size_t MEM_SIZE  = 100;
 
 struct Processor
 {
@@ -90,6 +91,7 @@ struct Processor
     Stack_t ret_address;
     size_t pc;
     int reg[REG_COUNT];
+    stack_elem RAM[MEM_SIZE];
 };
 
 struct Instruction
@@ -97,6 +99,13 @@ struct Instruction
     const char *name;
     int num;
     int (* execute) (Processor *proc);
+};
+
+struct File_names
+{
+    const char * const src;
+    const char *t_out;
+    const char *b_out;
 };
 
 
@@ -130,6 +139,8 @@ int InstRET  (Processor *proc);
 size_t SizeofFile(const char *file_name);
 
 void PR_PROC (Processor *proc);
+
+void ClearTerm();
 
 
 // CONSTANTS

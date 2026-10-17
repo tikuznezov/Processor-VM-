@@ -1,3 +1,4 @@
+#include "vm.h"
 #include "/Applications/VsСode/Onegin/onegin.h"
 
 // CONSTANTS
@@ -10,17 +11,12 @@ const int    UNREAD_VAL  = -27394383;
 
 const int   LABELS_COUNT = 20;
 
-struct File_names
-{
-    const char * const src;
-    const char *t_out;
-    const char *b_out;
-};
-
 // FUNCTIONS
 //-------------------------------------------------------------------------------------------------------------------------------------------------
 
 size_t StrLen(const char *str);
+
+void ClearTerm();
 
 int GetCommandV1(const char *str);
 

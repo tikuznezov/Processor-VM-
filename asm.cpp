@@ -1,4 +1,3 @@
-#include "vm.h"
 #include "asm.h"
 //------------------------------------------------------------------------------------
 #include "log.cpp"
@@ -18,18 +17,21 @@
 git clone git@github.com:tikuznezov/Processor-VM-.git
 */
 
-// TODO cut to func
+// COMP cut to func
 // COMP bin file info
 
 
 
 // TODO argc argv
-int main(void)
+int main(int argc, char *argv[])
 {
-    File_names fname = {.src = "src1.asm", .t_out     = "com1.txt", .b_out = "code.bin"};
+    File_names fname = {.src   = (argc > 1) ? argv[1] : "src1.asm",
+                        .t_out = (argc > 2) ? argv[2] : "code.txt",
+                        .b_out = (argc > 3) ? argv[3] : "code.bin",};
 
     File src = ReadSringsFromFile(fname.src);
 
+    // FIXME label init
     int labels[LABELS_COUNT] = {};
     for (int i = 0; i < LABELS_COUNT; i++)
         labels[i] = -1;
@@ -285,5 +287,4 @@ bool FindInst(int arg1, int count_read_el, int *cur_com_num, Instruction *cur_co
     }
     return true;
 }
-
 
