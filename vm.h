@@ -5,7 +5,7 @@ typedef double stack_elem;
 #define PRINT_ELEM_T(x) printf("%lg", x);
 #define SCANF_ELEM_T(x) scanf("%lg", &x);
 
-#define _PRT 1 //   zero is off \ other is on
+#define _PRT 0 //   zero is off \ other is on
 #define CRUSH_BIN NAN
 
 // #define _DEBUG
@@ -35,49 +35,45 @@ enum COMMANDS
     UNKNOWN = 0, // 0
     PUSH,        // 1
     POP,         // 2
-    POPr,        // 3
-    PUSHr,       // 4
-    JMP,         // 5
-    JB,          // 6  (<)
-    JBE,         // 7  (<=)
-    JE,          // 8  (==)
-    JNE,         // 9  (!=)
-    JAE,         // 10 (>=)
-    JA,          // 11 (>)
-    ADD,         // 12
-    SUB,         // 13
-    MUL,         // 14
-    DIV,         // 15
-    OUT,         // 16
-    HLT,         // 17
-    IN,          // 18
-    CALL,        // 19
-    RET          // 20
+    JMP,         // 3
+    JB,          // 4  (<)
+    JBE,         // 5  (<=)
+    JE,          // 6  (==)
+    JNE,         // 7  (!=)
+    JAE,         // 8  (>=)
+    JA,          // 9  (>)
+    ADD,         // 10
+    SUB,         // 11
+    MUL,         // 12
+    DIV,         // 13
+    OUT,         // 14
+    HLT,         // 15
+    IN,          // 16
+    CALL,        // 17
+    RET          // 18
 };
 
 enum ERR_CODES
 {
-    UNKNOWN_CRUSH,
-    PUSH_CRUSH,
-    POP_CRUSH,
-    POPr_CRUSH,
-    PUSHr_CRUSH,
-    JMP_CRUSH,
-    JB_CRUSH,
-    JBE_CRUSH,
-    JE_CRUSH,
-    JNE_CRUSH,
-    JAE_CRUSH,
-    JA_CRUSH,
-    ADD_CRUSH,
-    SUB_CRUSH,
-    MUL_CRUSH,
-    DIV_CRUSH,
-    OUT_CRUSH,
-    HLT_CRUSH,
-    IN_CRUSH,
-    CALL_CRUSH,
-    RET_CRUSH
+    UNKNOWN_CRUSH, // 0
+    PUSH_CRUSH,    // 1
+    POP_CRUSH,     // 2
+    JMP_CRUSH,     // 3
+    JB_CRUSH,      // 4
+    JBE_CRUSH,     // 5
+    JE_CRUSH,      // 6
+    JNE_CRUSH,     // 7
+    JAE_CRUSH,     // 8
+    JA_CRUSH,      // 9
+    ADD_CRUSH,     // 10
+    SUB_CRUSH,     // 11
+    MUL_CRUSH,     // 12
+    DIV_CRUSH,     // 13
+    OUT_CRUSH,     // 14
+    HLT_CRUSH,     // 15
+    IN_CRUSH,      // 16
+    CALL_CRUSH,    // 17
+    RET_CRUSH      // 18
 };
 
 const size_t REG_COUNT = 4;
@@ -85,27 +81,27 @@ const size_t MEM_SIZE  = 100;
 
 struct Processor
 {
-    int *code;
+    char *code;
     size_t code_size;
     Stack_t stack;
     Stack_t ret_address;
     size_t pc;
-    int reg[REG_COUNT];
+    stack_elem reg[REG_COUNT];
     stack_elem RAM[MEM_SIZE];
 };
 
 struct Instruction
 {
     const char *name;
-    int num;
+    char num;
     int (* execute) (Processor *proc);
 };
 
 struct File_names
 {
     const char * const src;
-    const char *t_out;
-    const char *b_out;
+    const char * const t_out;
+    const char * const b_out;
 };
 
 
@@ -142,9 +138,13 @@ void PR_PROC (Processor *proc);
 
 void ClearTerm();
 
+int CompInstUp(const void *a, const void *b);
+
 
 // CONSTANTS
 //-------------------------------------------------------------------------------------------------------------------------------------------------
+
+// FIXME out of vm.h
 
 const Instruction Instructions[] = 
 {
@@ -152,8 +152,6 @@ const Instruction Instructions[] =
 
     {.name = "PUSH",  .num = PUSH,  .execute = InstPUSH },
     {.name = "POP",   .num = POP,   .execute = InstPOP  },
-    {.name = "POPr",  .num = POPr,  .execute = InstPOPr },
-    {.name = "PUSHr", .num = PUSHr, .execute = InstPUSHr},
     {.name = "JMP",   .num = JMP,   .execute = InstJMP  },
     {.name = "JB",    .num = JB,    .execute = InstJB   },
     {.name = "JBE",   .num = JBE,   .execute = InstJBE  },

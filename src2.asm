@@ -1,0 +1,8 @@
+PUSH 67
+PUSH 52
+POP ax
+POP bx
+:12
+PUSH 8
+JMP :12
+JMP 23

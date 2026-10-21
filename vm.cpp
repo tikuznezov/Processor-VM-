@@ -1,9 +1,7 @@
 #include "vm.h"
 #include "log.cpp"
 #include "/Applications/VsСode/Stack/stack.h"
-#include "/Applications/VsСode/Stack/debug.h"
 #include "/Applications/VsСode/Stack/stack.cpp"
-#include "/Applications/VsСode/Stack/stack_debug.cpp"
 
 int error = 0;
 
@@ -51,7 +49,7 @@ int ReadTxtFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
     return 0;
 }
 
-int ReadBinFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
+int ReadBinFile(const char *filename, char **buffer_p, size_t *sizeof_buffer)
 {
     PR_FST;
 
@@ -59,7 +57,7 @@ int ReadBinFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
 
     size_t buf_size = SizeofFile(filename);
     PR("* starting calloc...\n");
-    int *buffer = (int *) calloc(buf_size, sizeof(char));
+    char *buffer = (char *) calloc(buf_size, sizeof(char));
     if (buffer == NULL)
     {
         printf("--> Buffer creation error (calloc error)!\n");
@@ -68,7 +66,7 @@ int ReadBinFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
 
     ssize_t read_bite_count = read(src_file, buffer, buf_size);
 
-    *sizeof_buffer = buf_size / sizeof(int);
+    *sizeof_buffer = buf_size / sizeof(char);
     *buffer_p = buffer;
 
     for (int i = 0; i < *sizeof_buffer; i++)
@@ -95,14 +93,17 @@ int RunBin(Processor proc)
     int count_inst_calls = 0;
     int err = 0;
 
+    // qsort((void *)Instructions, COUNT_OF_INSTRUCTIONS, sizeof(Instruction), CompInstUp);
+
+    // FIXME bin search
     while ((proc.pc < proc.code_size) && (count_inst_calls <= MAX_INSTRUCTION_CALLS))
     {
         count_inst_calls++;
 
         for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
         {
-            if (proc.code[proc.pc] == ((Instructions[i]).num))
-                err = (Instructions[i]).execute(&proc);
+            if ((proc.code[proc.pc] & 0x1F) == ((Instructions[i]).num))
+                err = (Instructions[i]).execute(&proc); // call function
         }
         if (err != 0)
             return err;
@@ -137,14 +138,6 @@ void PrintErrorCode(int err_code)
 
         case POP_CRUSH:
             PR("--> Error in POP!\n");
-            break;
-
-        case POPr_CRUSH:
-            PR("--> Error in POPr!\n");
-            break;
-
-        case PUSHr_CRUSH:
-            PR("--> Error in PUSHr!\n");
             break;
 
         case JMP_CRUSH:
@@ -256,7 +249,7 @@ void PR_PROC(Processor *proc)
     }
     PR("\n");
     for (int i = 0; i < sizeof(proc->reg)/sizeof(proc->reg[0]); i++)
-        PR("Reg[%c] = %d;\n", i + 'A', proc->reg[i]);
+        PR("Reg[%c] = %lg;\n", i + 'A', (double)proc->reg[i]);
 
 
     PR("Stack = ");
@@ -276,6 +269,8 @@ void PR_PROC(Processor *proc)
 // PROCESSOR FUNCTIONS
 //----------------------------------------------------------------------------------------------------------------------
 
+#define read_arg (proc->code[++proc->pc] << 24) | (proc->code[++proc->pc] << 16) | (proc->code[++proc->pc] << 8) | proc->code[++proc->pc];
+
 // COMP функции должны обрабатывать после себя такое количество аргументов, сколько ими предусмотрено и возвращать 
 // указатель на следующую инструкцию 
 
@@ -290,9 +285,35 @@ int InstPUSH (Processor *proc)
 
     PR_PROC(proc);
 
-    proc->pc++;
-    StackPush(&(proc->stack), proc->code[proc->pc]);
-    PR("* PUSH(%d)\n", proc->code[proc->pc]);
+
+    // STACK
+    if (proc->code[proc->pc] & 0x80)
+    {
+        int arg = read_arg;
+        PR("* PUSH to stack (%d);\n", arg);
+        StackPush(&(proc->stack), arg);
+    }
+    // REGISTER
+    else if (proc->code[proc->pc] & 0x40)
+    {
+        int reg_i = read_arg;
+        stack_elem arg = proc->reg[reg_i];
+        PR("* PUSH from REG[%cx] (%lg);\n", reg_i + 'a', arg);
+        StackPush(&(proc->stack), arg);
+    }
+    // MEMORY
+    else if (proc->code[proc->pc] & 0x20)
+    {
+        int mem_i = read_arg;
+        stack_elem arg = proc->RAM[mem_i];
+        PR("* PUSH from RAM[%d] (%lg);\n", mem_i, arg);
+        StackPush(&(proc->stack), arg);
+    }
+    else
+    {
+        PR("--> PUSH has'n arguments!\n");
+        return 1;
+    }
     proc->pc++;
 
     PR_FED;
@@ -306,61 +327,41 @@ int InstPOP  (Processor *proc)
 
     if (proc->stack.size > 0)
     {
-        StackPop(&(proc->stack));
-        PR("* POP(%d)\n", proc->code[proc->pc]);
+        PR("Stack size = %zu;\n", proc->stack.size);
+        // STACK
+        if (proc->code[proc->pc] & 0x80)
+        {
+            PR("--> POP has stack arguments!\n");
+            return 1;
+        }
+        // REGISTER
+        else if (proc->code[proc->pc] & 0x40)
+        {
+            int reg_i = read_arg;
+            stack_elem arg = StackPop(&(proc->stack));
+            proc->reg[reg_i] = arg;
+            PR("* POP to REG[%cx] (%lg);\n", reg_i + 'a', arg);
+        }
+        // MEMORY
+        else if (proc->code[proc->pc] & 0x20)
+        {
+            int mem_i = read_arg;
+            stack_elem arg = StackPop(&(proc->stack));
+            proc->RAM[mem_i] = arg;
+            PR("* POP to RAM[%d] (%lg);\n", mem_i, arg);
+        }
+        else
+        {
+            stack_elem arg = StackPop(&proc->stack);
+            PR("* POP (%lg) from stack", arg);
+        }
         proc->pc++;
-        PR("* Next instuction code = %zu.\n", proc->pc);
     }
     else
     {
         PR("--> Try to POP empty stack!\n");
         return POP_CRUSH;
     }
-
-    PR_FED;
-    return 0;
-}
-int InstPOPr (Processor *proc)
-{
-    PR_FST;
-    PR_PROC(proc);
-
-    if ((proc->stack.size > 0))
-    {
-        if ((proc->code[proc->pc + 1] - 1 < REG_COUNT) && (proc->code[proc->pc + 1] - 1 >= 0))
-
-        {
-            proc->reg[proc->code[proc->pc + 1] - 1] = StackPop(&(proc->stack));
-            PR("* POP(%d)\n", proc->code[proc->pc]);
-            proc->pc++;
-            proc->pc++;
-            PR("* Next instuction code = %zu.\n", proc->pc);
-        }
-        else
-        {
-            PR("--> Try to POPr in undefined register!\n");
-            return POPr_CRUSH;
-        }
-    }
-    else
-    {
-        PR("--> Try to POPr empty stack!\n");
-        return POPr_CRUSH;
-    }
-
-    PR_FED;
-    return 0;
-}
-int InstPUSHr(Processor *proc)
-{
-    PR_FST;
-
-    PR_PROC(proc);
-
-    StackPush(&(proc->stack), proc->reg[proc->code[proc->pc + 1] - 1]);
-    PR("* PUSHr(%d)\n", proc->reg[proc->code[proc->pc + 1] - 1]);
-    proc->pc++;
-    proc->pc++;
 
     PR_FED;
     return 0;
@@ -420,7 +421,7 @@ int InstMUL  (Processor *proc)
     PR_FED;
     return 0;
 }
-int InstDIV  (Processor *proc)
+int InstDIV  (Processor *proc) // FIXME div by zero
 {
     PR_FST;
     PR_PROC(proc);
@@ -519,9 +520,9 @@ int InstRET  (Processor *proc)
 //--------------------------------------------------------------------------------------------------
 
 #define JMP_AND_VER(name)                                                                   \
-if ((proc->code[proc->pc + 1] >= 0) && (proc->code[proc->pc + 1] < proc->code_size))        \
+if ((mark >= 0) && (mark < proc->code_size))                                                \
 {                                                                                           \
-    proc->pc = proc->code[proc->pc + 1];                                                    \
+    proc->pc = mark;                                                                        \
 }                                                                                           \
 else                                                                                        \
 {                                                                                           \
@@ -535,16 +536,17 @@ int st_size = 0;                                                                
 PR_PROC(proc);                                                                              \
 if (((st_size = proc->stack.size) >= 2))                                                    \
 {                                                                                           \
+    int mark = read_arg;                                                                    \
     stack_elem el1 = StackPop(&(proc->stack));                                              \
     stack_elem el2 = StackPop(&(proc->stack));                                              \
     PR("* " name " if (%lg " #cmp " %lg)\n", el2, el1);                                     \
     if (el2 cmp el1) {JMP_AND_VER(name);}                                                   \
-    else {PR("* Comparison is incorrect."); proc->pc += 2;}                                 \
+    else {PR("* Comparison is incorrect."); proc->pc += 1;}                                 \
 }                                                                                           \
 else                                                                                        \
 {                                                                                           \
     if (st_size < 2) {PR("--> Try to compare empty stack in " name "!\n");}                 \
-    proc->pc += 2;                                                                          \
+    proc->pc += 5;                                                                          \
 }                                                                                           \
 PR_FED;                                                                                     \
 return 0;
@@ -555,7 +557,9 @@ int InstJMP  (Processor *proc)
 
     if ((proc->code[proc->pc + 1] >= 0) && (proc->code[proc->pc + 1] < proc->code_size))
     {
-        proc->pc = proc->code[proc->pc + 1];
+        size_t mark = read_arg;
+        PR("* JMP to pc[%d];\n", mark);
+        proc->pc = mark;
     }
     else
     {
@@ -574,7 +578,7 @@ int InstJBE  (Processor *proc)
 {
     JMP_IF(<=, "JBE");
 }
-int InstJE   (Processor *proc)
+int InstJE   (Processor *proc) // FIXME epsilon equal
 {
     JMP_IF(==, "JE");
 }
@@ -590,6 +594,18 @@ int InstJA   (Processor *proc)
 {
     JMP_IF(>, "JA");
 }
+
+
+int CompInstUp(const void *a, const void *b) 
+{
+    int arg1 = ((Instruction *)a)->num;
+    int arg2 = ((Instruction *)b)->num;
+
+    if (arg1 < arg2) return -1;
+    if (arg1 > arg2) return 1;
+    return 0;
+}
+
 
 //-----------------------------------------------------------------------------------------------------------------------
 

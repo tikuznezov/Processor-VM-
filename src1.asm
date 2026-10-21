@@ -1,21 +1,21 @@
 IN
-POPr 2
+POP cx
 
 :2
 PUSH 100
-POPr 4
-PUSHr 4
-PUSHr 4
+POP dx
+PUSH dx
+PUSH dx
 MUL
 OUT
 
 PUSH 1
-PUSHr 1
+PUSH ax
 ADD
-POPr 1
+POP ax
 
-PUSHr 1
-PUSHr 2
+PUSH ax
+PUSH cx
 JB :2
 
 CALL :3
