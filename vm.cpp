@@ -490,7 +490,7 @@ int InstCALL (Processor *proc)
     PR_FST;
     PR_PROC(proc);
 
-    StackPush(&proc->ret_address, proc->pc + 2);
+    StackPush(&proc->ret_address, proc->pc + 5);
     InstJMP(proc);
 
     PR_FED;
