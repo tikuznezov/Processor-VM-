@@ -1,9 +1,19 @@
+// #define _DEBUG
 #include "asm.h"
 //------------------------------------------------------------------------------------
 #include "log.cpp"
 #include "vm.cpp"
 #include "/Applications/VsСode/Onegin/fileread.cpp"
 //------------------------------------------------------------------------------------
+
+#undef PRINT_ELEM_T(x)
+#undef SCANF_ELEM_T(x)
+
+#define stack_elem char
+#define PRINT_ELEM_T(x) printf("%d", x);
+#define SCANF_ELEM_T(x) scanf("%d", &x);
+
+
 /*
 1) считываем команду
 2) вторым символом считываем аргумент, обрабатываем его наличие
@@ -21,10 +31,26 @@ git clone git@github.com:tikuznezov/Processor-VM-.git
 // COMP bin file info
 
 
-
-// TODO argc argv
+// COMP argc argv
 int main(int argc, char *argv[])
 {
+    // sort hash
+                        InstHash hash_tab[COUNT_OF_INSTRUCTIONS] = {};
+                        for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
+                        {
+                            hash_tab[i].hash = HashCom((Instructions[i]).name);
+                            hash_tab[i].inst = Instructions[i];
+                            // PR("Inst '%8s' hash = %3d;\n", hash_t[i].inst.name, hash_t[i].hash);
+                        }
+                        PR("Run Qsort\n");
+                        qsort(hash_tab, COUNT_OF_INSTRUCTIONS, sizeof(InstHash), CompUInt);
+                        PR("End Qsort\n");
+                        for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
+                        {
+                            PR("%s = [%d]\n", hash_tab[i].inst.name, hash_tab[i].hash);
+                        }
+
+    // Init source file names
     File_names fname = {.src   = (argc > 1) ? argv[1] : "src1.asm",
                         .t_out = (argc > 2) ? argv[2] : "code.txt",
                         .b_out = (argc > 3) ? argv[3] : "code.bin",};
@@ -39,8 +65,9 @@ int main(int argc, char *argv[])
     const int repeat_count = 2;
     for (int a = 0; a < repeat_count; a++)
     {
-        AsmReadWrite(&src, fname, labels);
+        AsmReadWrite(&src, fname, labels, hash_tab);
     }
+    FreeFile(&src);
 
     return 0;
 }
@@ -49,7 +76,205 @@ int main(int argc, char *argv[])
 // FUNCTIONS
 //------------------------------------------------------------------------------------------------------------------------------------------------
 
-Instruction GetCommand(const char *command)
+Instruction GetCommand(const char *str_beg, InstHash *hash_tab)
+{
+    Instruction inst = {};
+
+    char inst_name[MAX_COM_LEN] = "";
+
+    if (sscanf(str_beg, "%[A-Z]", inst_name))
+    {
+        PR("\n* Inst %s;\n", inst_name);
+        uint hash = HashCom(inst_name);
+        InstHash *found = (InstHash*) bsearch(&hash, hash_tab, COUNT_OF_INSTRUCTIONS, sizeof(InstHash), CompUInt);
+        if (found != NULL)
+        {
+            PYELLOW;
+            PR("* Get hash instruction '%s'(%d), hash = %u;\n", (*found).inst.name, (*found).inst.num, (*found).hash);
+            DEF_COL;
+            return (*found).inst;
+        }
+        else
+        {
+            PRED;
+            PR("--> Unknown command!\n");
+            DEF_COL;
+        }
+    }
+    else
+    {
+        PRED;
+        PR("--> There's no instruction!\n");
+        DEF_COL;
+    }
+
+    return {};
+}
+
+int GetArgs(char *str_beg, int *labels, int *arg1, char *com_num)
+{
+    char trash[MAX_COM_LEN] = "";
+    int trsh[2];
+
+    int read_el_c = 0;
+
+    // stack call
+    if (2 == sscanf(str_beg, "%[A-Zrm] %d \n", trash, arg1))
+    {
+        // 80
+        PR("* GET Stack operation = %d;\n", *arg1);
+        *com_num |= 0x80;
+        read_el_c++;
+    }
+    // jmp label
+    else if (3 == sscanf(str_beg, "%[A-Zrm] %[:]%d \n", trash, trash, arg1))
+    {
+        *arg1 = labels[*arg1];
+        *com_num |= 0x80;
+        PR("* JMP label = %d;\n", *arg1);
+        read_el_c++;
+    }
+    // memory access
+    else if (2 == sscanf(str_beg, "%[A-Zrm] [%d] \n", trash, arg1))
+    {
+        PR("* MEM access [%d];\n", *arg1);
+        *com_num |= 0x20;
+        // 20
+        read_el_c++;
+    }
+    // register access
+    else if (3 == sscanf(str_beg, "%[A-Zrm] %1[a-g]%1[x] \n", trash, arg1, trash))
+    {
+        PR("* REG access = [%d] = %cx;\n", *arg1 - 'a', *arg1);
+        *arg1 = *arg1 - 'a';
+        *com_num |= 0x40;
+        // 40
+        read_el_c++;
+    }
+    else
+    {
+        // PYELLOW PR("<%s>\n", str_beg); DEF_COL
+        PR("There's no args. Or args not found.\n");
+        return 0;
+    }
+    return read_el_c;
+}
+
+
+size_t StrLen(const char *str)
+{
+    size_t len = 0;
+    while ((*str != '\0') && (*str != '\n') && (len < MAX_STR_LENGTH))
+    {
+        len++;
+        str++;
+    }
+
+    if (len >= MAX_STR_LENGTH)
+        printf("--> The maximum number of characters per line has been exceeded!\n");
+
+    return len;
+}
+
+int AsmReadWrite(File *src, File_names fname, int *labels, InstHash *hash_tab)
+{
+
+    // FILE *txt_out = fopen(fname.t_out, "w");
+    int bin_out = open(fname.b_out, O_TRUNC | O_CREAT | O_WRONLY, 0755);
+    File bin = {};
+    FileSize(fname.b_out, &bin);
+
+    char *code = (char *) calloc(bin.size, sizeof(char));
+
+    PR("* Files created.\n");
+
+    Instruction cur_com = Instructions[0];
+    int label;
+    int  arg1;
+    char temp_name[MAX_COM_LEN] = "";
+    size_t cur_com_num = 0;
+    size_t cur_index = 0;
+    int count_read_el = 0;
+
+    printf("Press ENTER to continue...");
+    getchar();
+
+    for (size_t i = 0; i <= src->str_count; i++)
+    {
+
+        label = -1;
+        arg1 = 0;
+
+        char *str_beg = src->str_pointers[i].beg;
+
+        if (str_beg[0] == '\n' || str_beg[0] == ' ')
+            continue;
+
+        if (FindLabel(str_beg, &label, labels, cur_index, i)) continue;
+
+        cur_com = GetCommand(str_beg, hash_tab);
+        code[cur_index] = cur_com.num & 0x1F;
+        cur_com_num++;
+        if (GetArgs(str_beg, labels, &arg1, &(code[cur_index++])))
+        {
+            code[cur_index++] = (arg1 >> 24) & 0xFF;
+            code[cur_index++] = (arg1 >> 16) & 0xFF;
+            code[cur_index++] = (arg1 >>  8) & 0xFF;
+            code[cur_index++] = (arg1 >>  0) & 0xFF;
+        }
+    }
+                for (int i = 0; i < cur_index; i++)
+                    {printf("[%X] -- [%3d]\n", code[i], i);}
+                printf("\n");
+
+    write(bin_out, code, cur_index);
+
+    return 0;
+}
+
+bool FindLabel(char *str_beg, int *label, int *labels, int cur_index, size_t string_num)
+{
+    if (str_beg[0] == ':')
+    {
+        PRED
+        PR("* Find label on %zu string.\n", string_num);
+        sscanf(str_beg, ":%d", label);
+        DEF_COL
+        PR("* Label[%d] = <%d>\n", *label, cur_index);
+        if ((*label >= 0) && (*label < LABELS_COUNT))
+        {
+            labels[*label] = cur_index;
+            PGREEN
+            PR("* Label was successfully saved.\n");
+        }
+        else
+        {
+            PRED
+            PR("\n\n--> Libel wasn't saved!!!\n\n");
+            return false;
+        }
+        DEF_COL;
+        return true;
+    }
+    return false;
+}
+
+uint HashCom(const char *com_name)
+{
+    PR("Hash (%8s) = ", com_name);
+    uint len = strnlen(com_name, MAX_COM_LEN);
+    uint hash = 0;
+    for (int i = 0; i < len; i++)
+    {
+        hash += com_name[i];
+    }
+    hash %= 51;
+    hash += 6;
+    PR("%3d;\n", hash);
+    return hash;
+}
+
+Instruction GetCommandV2(const char *command)
 {
     PR_FST;
 
@@ -67,7 +292,6 @@ Instruction GetCommand(const char *command)
     PR_FED;
     return Instructions[0];
 }
-
 
 int GetCommandV1(const char *str)
 {
@@ -124,22 +348,6 @@ int GetCommandV1(const char *str)
     return com;
 }
 
-
-size_t StrLen(const char *str)
-{
-    size_t len = 0;
-    while ((*str != '\0') && (*str != '\n') && (len < MAX_STR_LENGTH))
-    {
-        len++;
-        str++;
-    }
-
-    if (len >= MAX_STR_LENGTH)
-        printf("--> The maximum number of characters per line has been exceeded!\n");
-
-    return len;
-}
-
 int GetValue(const char *str)
 {
     PR_FST;
@@ -160,131 +368,24 @@ int GetValue(const char *str)
     return value;
 }
 
-
-int AsmReadWrite(File *src, File_names fname, int *labels)
+int CompUInt(const void *a, const void *b)
 {
-    FILE *txt_out = fopen(fname.t_out, "w");
+    // PR_FST
+    // PR("a = %u;\nb = %u;\n", ((InstHash *)a)->hash, ((InstHash *)b)->hash);
+    const unsigned int arg1 = ((InstHash *)a)->hash;
+    const unsigned int arg2 = ((InstHash *)b)->hash;
 
-    int bin_out = open(fname.b_out, O_TRUNC | O_CREAT | O_WRONLY, 0755);
-
-    PR("* Files created.\n");
-
-    Instruction cur_com = Instructions[0];
-    int label;
-    int  arg1;
-    char temp_name[MAX_COM_LEN] = "";
-    int cur_com_num = 0;
-    int count_read_el = 0;
-
-    printf("Press ENTER to continue...");
-    getchar();
-
-    for (size_t i = 0; i <= src->str_count; i++)
-    {
-
-        label = -1;
-        arg1 = 0;
-
-        char *str_beg = src->str_pointers[i].beg;
-
-        if (str_beg[0] == '\n' || str_beg[0] == ' ')
-            continue;
-
-        if (FindLabel(str_beg, &label, labels, cur_com_num, i)) continue;
-
-        count_read_el = sscanf(str_beg, "%s %d\n", temp_name, &arg1);
-        PGREEN PR("* Current command = <%s>, count_read_el = %2d, arg = %4d.\n", temp_name, count_read_el, arg1); DEF_COL
-        cur_com = GetCommand(temp_name);
-
-
-        if (FindJmp(str_beg, labels, &cur_com_num, &cur_com, txt_out, bin_out)) continue;
-
-
-        FindInst(arg1, count_read_el, &cur_com_num, &cur_com, txt_out, bin_out);
-    }
+    // PR_FED
+    if (arg1 < arg2) return -1;
+    if (arg1 > arg2) return 1;
     return 0;
 }
 
-bool FindLabel(char *str_beg, int *label, int *labels, int cur_com_num, size_t string_num)
-{
-    if (str_beg[0] == ':')
-    {
-        PRED
-        PR("* Find label on %zu string.\n", string_num);
-        sscanf(str_beg, ":%d", label);
-        DEF_COL
-        PR("*Label[%d] = <%d>\n", *label, cur_com_num);
-        if ((*label >= 0) && (*label < LABELS_COUNT))
-        {
-            labels[*label] = cur_com_num;
-            PGREEN
-            PR("* Libel was successfully saved.\n\n");
-        }
-        else
-        {
-            PRED
-            PR("\n\n--> Libel wasn't saved!!!\n\n");
-            return false;
-        }
-        DEF_COL;
-        return true;
-    }
-    return false;
-}
 
-bool FindJmp(char *str_beg, int *labels, int *cur_com_num, Instruction *cur_com, FILE *txt_out, int bin_out)
-{
-    if ((cur_com->name[0] == 'J') || !(strncmp(cur_com->name, "CALL", 4)))
-    {
-        PRED PR("Find JMP\n"); DEF_COL;
-        PR("\"%s\"\n", cur_com->name);
-        char com[20] = "";
-        int arg = -1;
-        PR("Current string [%s] = <%d>\n", com, arg);
 
-        if ((2 == sscanf(str_beg, "%s :%d", com, &arg)) && (arg != -1))
-        {
-            PR("<%s to %d>\n", cur_com->name, arg);
-            fprintf(txt_out, "%d %d\n", cur_com->num, labels[arg]);
-            write(bin_out, &(cur_com->num), sizeof(cur_com->num));
-            write(bin_out, (&labels[arg]), sizeof(int));
-        }
-        else if ((2 == sscanf(str_beg, "%s %d", com, &arg)) && (arg != -1))
-        {
-            PR("<%s to %d>\n", cur_com->name, arg);
-            fprintf(txt_out, "%d %d\n", cur_com->num, labels[arg]);
-            write(bin_out, &(cur_com->num), sizeof(cur_com->num));
-            write(bin_out, (&labels[arg]), sizeof(int));
-        }
-        else
-        {
-            PRED PR("Error: label not found\n") DEF_COL;
-            *cur_com_num+=2;
-            return false;
-        }
-        *cur_com_num+=2;
-        return true;
-    }
-    return false;
-}
 
-bool FindInst(int arg1, int count_read_el, int *cur_com_num, Instruction *cur_com, FILE *txt_out, int bin_out)
-{
-    if (count_read_el == 1)
-    {
-        PYELLOW PR("fprintf <%d>\n", cur_com->num); DEF_COL
-        fprintf(txt_out, "%d\n", cur_com->num);
-        write(bin_out, &(cur_com->num), sizeof(cur_com->num));
-        (*cur_com_num)++;
-    }
-    else if (count_read_el == 2)
-    {
-        PYELLOW PR("fprintf <%d %d>\n", cur_com->num, arg1); DEF_COL
-        fprintf(txt_out, "%d %d\n", cur_com->num, arg1);
-        write(bin_out, &(cur_com->num), sizeof(cur_com->num));
-        write(bin_out, &(arg1), sizeof(arg1));
-        (*cur_com_num)+=2;
-    }
-    return true;
-}
 
+
+
+
+#undef stack_elem
