@@ -50,7 +50,8 @@ enum COMMANDS
     HLT,         // 15
     IN,          // 16
     CALL,        // 17
-    RET          // 18
+    RET,         // 18
+    SQRT         // 19
 };
 
 enum ERR_CODES
@@ -73,7 +74,8 @@ enum ERR_CODES
     HLT_CRUSH,     // 15
     IN_CRUSH,      // 16
     CALL_CRUSH,    // 17
-    RET_CRUSH      // 18
+    RET_CRUSH,     // 18
+    SQRT_CRUSH     // 19
 };
 
 const size_t REG_COUNT = 4;
@@ -131,6 +133,7 @@ int InstHLT  (Processor *proc);
 int InstIN   (Processor *proc);
 int InstCALL (Processor *proc);
 int InstRET  (Processor *proc);
+int InstSQRT (Processor *proc);
 
 size_t SizeofFile(const char *file_name);
 
@@ -167,12 +170,13 @@ const Instruction Instructions[] =
     {.name = "HLT",   .num = HLT,   .execute = InstHLT  },
     {.name = "IN",    .num = IN,    .execute = InstIN   },
     {.name = "CALL",  .num = CALL,  .execute = InstCALL },
-    {.name = "RET",   .num = RET,   .execute = InstRET  }
+    {.name = "RET",   .num = RET,   .execute = InstRET  },
+    {.name = "SQRT",  .num = SQRT,  .execute = InstSQRT }
 };
 const int COUNT_OF_INSTRUCTIONS = sizeof(Instructions) / sizeof(Instruction);
 
 
-const size_t BUF_SIZE = 1000;
+const size_t BUF_SIZE = 1000; // FIXME
 
 const int MAX_INSTRUCTION_CALLS = 500;
 

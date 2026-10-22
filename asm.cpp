@@ -67,7 +67,6 @@ int main(int argc, char *argv[])
     {
         AsmReadWrite(&src, fname, labels, hash_tab);
     }
-    FreeFile(&src);
 
     return 0;
 }
@@ -111,45 +110,68 @@ Instruction GetCommand(const char *str_beg, InstHash *hash_tab)
     return {};
 }
 
+#define ISEND(char_symbol) if ((char_symbol != '\n') && (char_symbol != ';') && (char_symbol != '\0'))      \
+{                                                                                                           \
+    PRED                                                                                                    \
+    printf("--> Incorrect instruction format in <");                                                        \
+    int i = 0; while(str_beg[i] != '\n') printf("%c", str_beg[i++]);                                        \
+    printf(">\n");                                                                                          \
+    exit(100);                                                                                              \
+    DEF_COL                                                                                                 \
+}
+
+#define FINDEND                                                                                             \
+char *char_p = str_beg + read_char;                                                                         \
+while (*char_p == ' ' || *char_p == '\t') char_p++;                                                         \
+ISEND(*char_p)
+
+
+
 int GetArgs(char *str_beg, int *labels, int *arg1, char *com_num)
 {
     char trash[MAX_COM_LEN] = "";
-    int trsh[2];
-
+    int read_char = 0;
     int read_el_c = 0;
 
     // stack call
-    if (2 == sscanf(str_beg, "%[A-Zrm] %d \n", trash, arg1))
+    if (2 == sscanf(str_beg, "%[A-Zrm] %d%n", trash, arg1, &read_char))
     {
-        // 80
+        FINDEND;
         PR("* GET Stack operation = %d;\n", *arg1);
         *com_num |= 0x80;
         read_el_c++;
     }
     // jmp label
-    else if (3 == sscanf(str_beg, "%[A-Zrm] %[:]%d \n", trash, trash, arg1))
+    else if (3 == sscanf(str_beg, "%[A-Zrm] %1[:]%d%n", trash, trash, arg1, &read_char))
     {
+        FINDEND;
         *arg1 = labels[*arg1];
         *com_num |= 0x80;
         PR("* JMP label = %d;\n", *arg1);
         read_el_c++;
     }
     // memory access
-    else if (2 == sscanf(str_beg, "%[A-Zrm] [%d] \n", trash, arg1))
+    else if (2 == sscanf(str_beg, "%[A-Zrm] [%d]%n", trash, arg1, &read_char))
     {
+        FINDEND;
         PR("* MEM access [%d];\n", *arg1);
         *com_num |= 0x20;
         // 20
         read_el_c++;
     }
     // register access
-    else if (3 == sscanf(str_beg, "%[A-Zrm] %1[a-g]%1[x] \n", trash, arg1, trash))
+    else if (3 == sscanf(str_beg, "%[A-Zrm] %1[a-g]%1[x]%n", trash, arg1, trash, &read_char))
     {
+        FINDEND;
         PR("* REG access = [%d] = %cx;\n", *arg1 - 'a', *arg1);
         *arg1 = *arg1 - 'a';
         *com_num |= 0x40;
         // 40
         read_el_c++;
+    }
+    else if (1 == sscanf(str_beg, "%[A-Zrm]%n", trash, &read_char))
+    {
+        FINDEND;
     }
     else
     {
@@ -207,7 +229,7 @@ int AsmReadWrite(File *src, File_names fname, int *labels, InstHash *hash_tab)
 
         char *str_beg = src->str_pointers[i].beg;
 
-        if (str_beg[0] == '\n' || str_beg[0] == ' ')
+        if (str_beg[0] == '\n' || str_beg[0] == ' ' || str_beg[0] == ';')
             continue;
 
         if (FindLabel(str_beg, &label, labels, cur_index, i)) continue;

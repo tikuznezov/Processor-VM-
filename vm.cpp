@@ -7,13 +7,15 @@ int error = 0;
 
 // считывает все в указанный буфер
 // читает аргументы и команды в массив интов
+
+// TODO file info, watermark, header
 int ReadTxtFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
 {
     PR_FST;
     FILE *Code = fopen(filename, "r");
 
     PR("* starting calloc...\n");
-    int *buffer = (int *) calloc(BUF_SIZE, sizeof(int)); // FIXME
+    int *buffer = (int *) calloc(BUF_SIZE, sizeof(int)); // FIXME !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     if (buffer == NULL)
     {
         printf("--> Buffer creation error (calloc error)!\n");
@@ -103,7 +105,10 @@ int RunBin(Processor proc)
         for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
         {
             if ((proc.code[proc.pc] & 0x1F) == ((Instructions[i]).num))
+            {
                 err = (Instructions[i]).execute(&proc); // call function
+                if (err != 0) break;
+            }
         }
         if (err != 0)
             return err;
@@ -491,10 +496,10 @@ int InstCALL (Processor *proc)
     PR_PROC(proc);
 
     StackPush(&proc->ret_address, proc->pc + 5);
-    InstJMP(proc);
+    int err = InstJMP(proc);
 
     PR_FED;
-    return 0;
+    return err;
 }
 int InstRET  (Processor *proc)
 {
@@ -512,6 +517,28 @@ int InstRET  (Processor *proc)
         return RET_CRUSH;
     }
 
+    PR_FED;
+    return 0;
+}
+int InstSQRT (Processor *proc)
+{
+    PR_FST;
+    PR_PROC(proc);
+    if (proc->stack.size >= 1)
+    {
+        stack_elem arg1 = StackPop(&(proc->stack));
+        if (arg1 < 0)
+            return SQRT_CRUSH;
+        stack_elem res = sqrt(arg1);
+        StackPush(&(proc->stack), res);
+        PR("* SQRT(%lg) = %lg;\n", arg1, res);
+        proc->pc++;
+    }
+    else
+    {
+        PR("--> Try to SQRT empty stack!\n");
+        return SQRT_CRUSH;
+    }
     PR_FED;
     return 0;
 }
