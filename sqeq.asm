@@ -1,9 +1,7 @@
 IN 
 POP ax
-
 IN
 POP bx
-
 IN
 POP cx
 
@@ -37,6 +35,8 @@ DIV
 OUT
 
 HLT
+
+; end main
 
 ; disk
 :1

@@ -5,7 +5,7 @@ typedef double stack_elem;
 #define PRINT_ELEM_T(x) printf("%lg", x);
 #define SCANF_ELEM_T(x) scanf("%lg", &x);
 
-#define _PRT 0 //   zero is off \ other is on
+#define _PRT 1 //   zero is off \ other is on
 #define CRUSH_BIN NAN
 
 // #define _DEBUG
@@ -56,6 +56,8 @@ enum COMMANDS
 
 enum ERR_CODES
 {
+    UNKNOWN_COMMAND = -1,// -1
+
     UNKNOWN_CRUSH, // 0
     PUSH_CRUSH,    // 1
     POP_CRUSH,     // 2
@@ -177,6 +179,8 @@ const int COUNT_OF_INSTRUCTIONS = sizeof(Instructions) / sizeof(Instruction);
 
 
 const size_t BUF_SIZE = 1000; // FIXME
+
+const double EPSILON = 0.0001;
 
 const int MAX_INSTRUCTION_CALLS = 500;
 

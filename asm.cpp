@@ -35,25 +35,13 @@ git clone git@github.com:tikuznezov/Processor-VM-.git
 int main(int argc, char *argv[])
 {
     // sort hash
-                        InstHash hash_tab[COUNT_OF_INSTRUCTIONS] = {};
-                        for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
-                        {
-                            hash_tab[i].hash = HashCom((Instructions[i]).name);
-                            hash_tab[i].inst = Instructions[i];
-                            // PR("Inst '%8s' hash = %3d;\n", hash_t[i].inst.name, hash_t[i].hash);
-                        }
-                        PR("Run Qsort\n");
-                        qsort(hash_tab, COUNT_OF_INSTRUCTIONS, sizeof(InstHash), CompUInt);
-                        PR("End Qsort\n");
-                        for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
-                        {
-                            PR("%s = [%d]\n", hash_tab[i].inst.name, hash_tab[i].hash);
-                        }
+    InstHash hash_tab[COUNT_OF_INSTRUCTIONS] = {};
+    InitHashT(hash_tab);
 
     // Init source file names
     File_names fname = {.src   = (argc > 1) ? argv[1] : "src1.asm",
-                        .t_out = (argc > 2) ? argv[2] : "code.txt",
-                        .b_out = (argc > 3) ? argv[3] : "code.bin",};
+                        .b_out = (argc > 2) ? argv[2] : "code.bin",
+                        .t_out = (argc > 3) ? argv[3] : "code.txt",};
 
     File src = ReadSringsFromFile(fname.src);
 
@@ -74,6 +62,27 @@ int main(int argc, char *argv[])
 
 // FUNCTIONS
 //------------------------------------------------------------------------------------------------------------------------------------------------
+
+InstHash* InitHashT(InstHash *hash_tab)
+{
+    for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
+    {
+        hash_tab[i].hash = HashCom((Instructions[i]).name);
+        hash_tab[i].inst = Instructions[i];
+        // PR("Inst '%8s' hash = %3d;\n", hash_t[i].inst.name, hash_t[i].hash);
+    }
+    PR("* Run Qsort\n");
+    qsort(hash_tab, COUNT_OF_INSTRUCTIONS, sizeof(InstHash), CompUInt);
+    PR("* End Qsort\n");
+    PR("* SORTED HASH TABLE:\n")
+    for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
+    {
+        PR("|----------------|\n");
+        PR("| %8s = %3d |\n", hash_tab[i].inst.name, hash_tab[i].hash);
+    }
+    PR("|----------------|\n");
+    return hash_tab;
+}
 
 Instruction GetCommand(const char *str_beg, InstHash *hash_tab)
 {
@@ -216,7 +225,7 @@ int AsmReadWrite(File *src, File_names fname, int *labels, InstHash *hash_tab)
     char temp_name[MAX_COM_LEN] = "";
     size_t cur_com_num = 0;
     size_t cur_index = 0;
-    int count_read_el = 0;
+    // int count_read_el = 0;
 
     printf("Press ENTER to continue...");
     getchar();
@@ -229,14 +238,20 @@ int AsmReadWrite(File *src, File_names fname, int *labels, InstHash *hash_tab)
 
         char *str_beg = src->str_pointers[i].beg;
 
+        // skip comments and empty lines
         if (str_beg[0] == '\n' || str_beg[0] == ' ' || str_beg[0] == ';')
             continue;
 
-        if (FindLabel(str_beg, &label, labels, cur_index, i)) continue;
+        // remember label in list
+        if (FindLabel(str_beg, &label, labels, cur_index, i)) 
+            continue;
 
+        // get command
         cur_com = GetCommand(str_beg, hash_tab);
         code[cur_index] = cur_com.num & 0x1F;
         cur_com_num++;
+
+        // check args
         if (GetArgs(str_beg, labels, &arg1, &(code[cur_index++])))
         {
             code[cur_index++] = (arg1 >> 24) & 0xFF;
@@ -245,9 +260,9 @@ int AsmReadWrite(File *src, File_names fname, int *labels, InstHash *hash_tab)
             code[cur_index++] = (arg1 >>  0) & 0xFF;
         }
     }
-                for (int i = 0; i < cur_index; i++)
-                    {printf("[%X] -- [%3d]\n", code[i], i);}
-                printf("\n");
+
+    if ((_PRT == 1))
+        DisplayBin(cur_index, code);
 
     write(bin_out, code, cur_index);
 
@@ -259,7 +274,7 @@ bool FindLabel(char *str_beg, int *label, int *labels, int cur_index, size_t str
     if (str_beg[0] == ':')
     {
         PRED
-        PR("* Find label on %zu string.\n", string_num);
+        PR("\n* Find label on %zu string.\n", string_num);
         sscanf(str_beg, ":%d", label);
         DEF_COL
         PR("* Label[%d] = <%d>\n", *label, cur_index);
@@ -283,7 +298,7 @@ bool FindLabel(char *str_beg, int *label, int *labels, int cur_index, size_t str
 
 uint HashCom(const char *com_name)
 {
-    PR("Hash (%8s) = ", com_name);
+    PR("* Hash (%8s) = ", com_name);
     uint len = strnlen(com_name, MAX_COM_LEN);
     uint hash = 0;
     for (int i = 0; i < len; i++)
@@ -403,7 +418,29 @@ int CompUInt(const void *a, const void *b)
     return 0;
 }
 
-
+void DisplayBin(size_t cur_index, char *code)
+{
+    PGREEN; PR("\nDo you want to display binary list? (y/n)\n"); DEF_COL;
+    char trash[10] = "";
+    if (1 == scanf("%[y]", trash))
+    {
+        PR("\n");
+        PR("/======================\\\n");
+        PR("|  DEC  |  HEX  | INDX |\n");
+        PR("|----------------------|\n");
+        for (int i = 0; i < cur_index; i++)
+            {
+                PR("| %4hhu  |   %02X  | %4d |\n", code[i], (unsigned char)code[i], i);
+                PR("|----------------------|\n");
+            }
+        PR("\n");
+        ClearTerm();
+    }
+    else
+    {
+        PR("\n");
+    }
+}
 
 
 

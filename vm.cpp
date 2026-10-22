@@ -282,7 +282,7 @@ void PR_PROC(Processor *proc)
 int InstUNKNOWN(Processor *proc)
 {
     printf("--> Unknown instruction!\n");
-    return 1;
+    return UNKNOWN_COMMAND;
 }
 int InstPUSH (Processor *proc)
 {
@@ -371,14 +371,17 @@ int InstPOP  (Processor *proc)
     PR_FED;
     return 0;
 }
-int InstADD  (Processor *proc) // FIXME temp
+int InstADD  (Processor *proc)
 {
     PR_FST;
     PR_PROC(proc);
     if (proc->stack.size >= 2)
     {
-        StackPush(&(proc->stack), StackPop(&(proc->stack)) + StackPop(&(proc->stack)));
-        PR("* ADD");
+        stack_elem arg1 = StackPop(&(proc->stack));
+        stack_elem arg2 = StackPop(&(proc->stack));
+
+        StackPush(&(proc->stack), arg1 + arg2);
+        PR("* ADD(%lg + %lg) = %lg;", arg1, arg2, arg1 + arg2);
         proc->pc++;
     }
     else
@@ -395,8 +398,11 @@ int InstSUB  (Processor *proc)
     PR_PROC(proc);
     if (proc->stack.size >= 2)
     {
-        StackPush(&(proc->stack), 0 - StackPop(&(proc->stack)) + StackPop(&(proc->stack)));
-        PR("* SUB\n");
+        stack_elem arg1 = StackPop(&(proc->stack));
+        stack_elem arg2 = StackPop(&(proc->stack));
+
+        StackPush(&(proc->stack), arg2 - arg1);
+        PR("* SUB(%lg - %lg) = %lg;\n", arg2, arg1, arg2-arg1);
         proc->pc++;
     }
     else
@@ -413,8 +419,11 @@ int InstMUL  (Processor *proc)
     PR_PROC(proc);
     if (proc->stack.size >= 2)
     {
-        StackPush(&(proc->stack), StackPop(&(proc->stack)) * StackPop(&(proc->stack)));
-        PR("* MUL:\n");
+        stack_elem arg1 = StackPop(&(proc->stack));
+        stack_elem arg2 = StackPop(&(proc->stack));
+
+        StackPush(&(proc->stack), arg1 * arg2);
+        PR("* MUL(%lg * %lg) = ;\n", arg1, arg2, arg1*arg2);
         proc->pc++;
     }
     else
@@ -432,8 +441,17 @@ int InstDIV  (Processor *proc) // FIXME div by zero
     PR_PROC(proc);
     if (proc->stack.size >= 2)
     {
-        StackPush(&(proc->stack), 1 / StackPop(&(proc->stack)) * StackPop(&(proc->stack)));
-        PR("* DIV:\n");
+        stack_elem arg1 = StackPop(&(proc->stack));
+        stack_elem arg2 = StackPop(&(proc->stack));
+
+        if (arg1 == 0)
+        {
+            PR("--> Division by zero!\n");
+            return DIV_CRUSH;
+        }
+
+        StackPush(&(proc->stack), arg2 / arg1);
+        PR("* DIV(%lg / %lg) = %lg;\n", arg2, arg1, arg2/arg1);
         proc->pc++;
     }
     else
@@ -451,9 +469,10 @@ int InstOUT  (Processor *proc)
     PR_PROC(proc);
     if (proc->stack.size > 0)
     {
-        PR("* OUT\n");
+        stack_elem arg1 = StackPop(&(proc->stack));
+        PR("* OUT(%lg)\n", arg1);
         printf("Result = ");
-        PRINT_ELEM_T(StackPop(&(proc->stack)));
+        PRINT_ELEM_T(arg1);
         printf(";\n");
         proc->pc++;
     }
@@ -546,18 +565,18 @@ int InstSQRT (Processor *proc)
 // JUMPS
 //--------------------------------------------------------------------------------------------------
 
-#define JMP_AND_VER(name)                                                                   \
-if ((mark >= 0) && (mark < proc->code_size))                                                \
-{                                                                                           \
-    proc->pc = mark;                                                                        \
-}                                                                                           \
-else                                                                                        \
-{                                                                                           \
-    PR("--> Try to " name " out of bounds!\n");                                             \
-    return JMP_CRUSH;                                                                       \
+#define JMP_AND_VER(name){                                                                  \
+    if ((mark >= 0) && (mark < proc->code_size))                                                \
+    {                                                                                           \
+        proc->pc = mark;                                                                        \
+    }                                                                                           \
+    else                                                                                        \
+    {                                                                                           \
+        PR("--> Try to " name " out of bounds!\n");                                             \
+        return JMP_CRUSH;                                                                       \
+    }                                                                                           \
 }
-
-#define JMP_IF(cmp, name)                                                                   \
+#define JMP_IF(cmp, name){                                                                  \
 PR_FST;                                                                                     \
 int st_size = 0;                                                                            \
 PR_PROC(proc);                                                                              \
@@ -576,7 +595,9 @@ else                                                                            
     proc->pc += 5;                                                                          \
 }                                                                                           \
 PR_FED;                                                                                     \
-return 0;
+return 0;                                                                                   \
+}
+
 
 int InstJMP  (Processor *proc)
 {
@@ -631,6 +652,11 @@ int CompInstUp(const void *a, const void *b)
     if (arg1 < arg2) return -1;
     if (arg1 > arg2) return 1;
     return 0;
+}
+
+bool IsEqual(double arg1, double arg2)
+{
+    return (fabs(arg1 - arg2) < EPSILON);
 }
 
 

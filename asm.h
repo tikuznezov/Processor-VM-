@@ -21,6 +21,8 @@ const int   LABELS_COUNT = 20;
 
 size_t StrLen(const char *str);
 
+void DisplayBin(size_t cur_index, char *code);
+
 void ClearTerm();
 
 int GetCommandV1(const char *str);
@@ -28,6 +30,8 @@ int GetCommandV1(const char *str);
 int GetValue(const char *str);
 
 Instruction GetCommand(const char *str_beg, InstHash *hash_tab);
+
+InstHash* InitHashT(InstHash *hash_tab);
 
 int GetArgs(char *str_beg, int *labels, int *arg1, char *com_num);
 

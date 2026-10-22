@@ -1,8 +1,8 @@
 IN
 
 CALL :1
-
-OUT ;kjk
+OUT
+HLT
 
 
 :1
@@ -10,7 +10,6 @@ POP ax
 PUSH ax
 PUSH 1
 JNE :2
-
 
 PUSH 1 ; случай равенства единице
 RET
