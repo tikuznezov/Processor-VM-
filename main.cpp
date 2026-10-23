@@ -8,29 +8,24 @@
 
 // TODO push [AX+1]
 
-// COMP argc argv
+
 int main(int argc, char *argv[])
 {
-    // sort hash
-    InstHash hash_tab[COUNT_OF_INSTRUCTIONS] = {};
-    InitHashT(hash_tab);
+    const char *src_bin = (argc > 1) ? argv[1] : "code.bin";
+    // const char *src_txt = (argc > 1) ? argv[1] : "code.txt";
+    int err = 0;
+    Processor proc = {};
 
-    // Init source file names
-    File_names fname = {.src   = (argc > 1) ? argv[1] : "src1.asm",
-                        .b_out = (argc > 2) ? argv[2] : "code.bin",
-                        .t_out = (argc > 3) ? argv[3] : "code.txt",};
+    ReadBinFile(src_bin, &(proc.code), &(proc.code_size));
+    // ReadTxtFile(src_txt, &(proc.code), &(proc.code_size));
+    err = RunBin(proc);
 
-    File src = ReadSringsFromFile(fname.src);
-
-    // FIXME label init
-    int labels[LABELS_COUNT] = {};
-    for (int i = 0; i < LABELS_COUNT; i++)
-        labels[i] = -1;
-
-    const int repeat_count = 2;
-    for (int a = 0; a < repeat_count; a++)
+    if (err != 0)
     {
-        AsmReadWrite(&src, fname, labels, hash_tab);
+        if (err != HLT_CRUSH) PRED;
+        PR("* Completed 'RunBin'.\n");
+        PrintErrorCode(err);
+        DEF_COL;
     }
 
     return 0;
