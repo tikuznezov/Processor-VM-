@@ -31,34 +31,6 @@ git clone git@github.com:tikuznezov/Processor-VM-.git
 // COMP bin file info
 
 
-// COMP argc argv
-int main(int argc, char *argv[])
-{
-    // sort hash
-    InstHash hash_tab[COUNT_OF_INSTRUCTIONS] = {};
-    InitHashT(hash_tab);
-
-    // Init source file names
-    File_names fname = {.src   = (argc > 1) ? argv[1] : "src1.asm",
-                        .b_out = (argc > 2) ? argv[2] : "code.bin",
-                        .t_out = (argc > 3) ? argv[3] : "code.txt",};
-
-    File src = ReadSringsFromFile(fname.src);
-
-    // FIXME label init
-    int labels[LABELS_COUNT] = {};
-    for (int i = 0; i < LABELS_COUNT; i++)
-        labels[i] = -1;
-
-    const int repeat_count = 2;
-    for (int a = 0; a < repeat_count; a++)
-    {
-        AsmReadWrite(&src, fname, labels, hash_tab);
-    }
-
-    return 0;
-}
-
 
 // FUNCTIONS
 //------------------------------------------------------------------------------------------------------------------------------------------------
