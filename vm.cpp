@@ -8,70 +8,73 @@ int error = 0;
 // считывает все в указанный буфер
 // читает аргументы и команды в массив интов
 
-// TODO file info, watermark, header
-int ReadTxtFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
+// // TODO file info, watermark, header
+
+
+// MAIN
+//-----------------------------------------------------------------------------------------------------------------------
+
+int main(int argc, char *argv[])
 {
-    PR_FST;
-    FILE *Code = fopen(filename, "r");
+    const char *src_bin = (argc > 1) ? argv[1] : "code.bin";
+    // const char *src_txt = (argc > 1) ? argv[1] : "code.txt";
+    int err = 0;
+    Processor proc = {};
 
-    PR("* starting calloc...\n");
-    int *buffer = (int *) calloc(BUF_SIZE, sizeof(int)); // FIXME !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    if (buffer == NULL)
+    ReadBinFile(src_bin, &(proc.code), &(proc.code_size));
+    // ReadTxtFile(src_txt, &(proc.code), &(proc.code_size));
+    err = RunBin(proc);
+
+    if (err != 0)
     {
-        printf("--> Buffer creation error (calloc error)!\n");
-    }
-    PR("* calloc comp\n");
-
-    size_t readmark = 1;
-    *sizeof_buffer = 0;
-    while ((readmark != 0) && (readmark != -1))
-    {
-        PR("current index = [%zu]\n", *sizeof_buffer);
-        readmark = fscanf(Code, "%d", &(buffer[(*sizeof_buffer)]));
-        PR("read (%d)\n", (buffer[(*sizeof_buffer)]));
-        (*sizeof_buffer)++;
-
-        if ((readmark == 1) && ((buffer[(*sizeof_buffer)] == 501)))
-        {
-            readmark = fscanf(Code, "%d", &(buffer[(*sizeof_buffer)]));
-            (*sizeof_buffer)++;
-        }
+        if (err != HLT_CRUSH) PRED;
+        PR("* Completed 'RunBin'.\n");
+        PrintErrorCode(err);
+        DEF_COL;
     }
 
-    *buffer_p = buffer;
-    (*sizeof_buffer)--; // он считывает конец файла и увеличивает счетчик. чтобы не писать проверку достижения конца на каждом этапе в самом конце вычитаем 1
-
-    PR("sizeof(buffer) = %zu;\n", *sizeof_buffer);
-    PR("buffer =");
-    for (int i = 0; i < *sizeof_buffer; i++)
-        PR(" [%d]", buffer[i]);
-    PR(";\n");
-
-    PR_FED;
     return 0;
 }
+
+// FUNCTIONS
+//-----------------------------------------------------------------------------------------------------------------------
 
 int ReadBinFile(const char *filename, char **buffer_p, size_t *sizeof_buffer)
 {
     PR_FST;
+    assert(filename);
+    assert(buffer_p);
+    assert(sizeof_buffer);
 
     int src_file = open(filename, O_RDONLY);
 
-    size_t buf_size = SizeofFile(filename);
-    PR("* starting calloc...\n");
-    char *buffer = (char *) calloc(buf_size, sizeof(char));
+    // creation code buffer
+    ssize_t buf_size = SizeofFile(filename);
+    if (buf_size == -1)
+    {
+        printf("--> File size was calculated incorrect!\n");
+        return (int)buf_size;
+    }
+    PR("* Start creating code buffer by calloc...\n");
+    char *buffer = (char *) calloc((size_t)buf_size, sizeof(char));
     if (buffer == NULL)
     {
         printf("--> Buffer creation error (calloc error)!\n");
     }
-    PR("* calloc comp\n");
+    PR("* Code buffer successfully created.\n");
 
-    ssize_t read_bite_count = read(src_file, buffer, buf_size);
+    ssize_t read_bite_count = read(src_file, buffer, (size_t)buf_size);
+    PR("* Count of read byte from binary file = %zu.\n", read_bite_count);
+    if (read_bite_count != buf_size)
+    {
+        PR("--> The file was not read to the end!\n")
+        return -1;
+    }
 
-    *sizeof_buffer = buf_size / sizeof(char);
+    *sizeof_buffer = (size_t)buf_size / sizeof(char);
     *buffer_p = buffer;
 
-    for (int i = 0; i < *sizeof_buffer; i++)
+    for (size_t i = 0; i < *sizeof_buffer; i++)
     {
         PR("[%d] ", (buffer)[i]);
     }
@@ -79,7 +82,6 @@ int ReadBinFile(const char *filename, char **buffer_p, size_t *sizeof_buffer)
     PR_FED;
     return 0;
 }
-// группа функций соотв номерам команд
 
 // выполняет бинарный файл
 int RunBin(Processor proc)
@@ -96,19 +98,7 @@ int RunBin(Processor proc)
     int err = 0;
 
     Instruction Insts[COUNT_OF_INSTRUCTIONS] = {};
-    for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
-        Insts[i] = Instructions[i];
-
-    PR("* RUN qsort...\n");
-    qsort((void *) Insts, COUNT_OF_INSTRUCTIONS, sizeof(Instruction), CompInstUp);
-    PR("* END qsort;\n");
-
-    PR("|----------|------|\n");
-    for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
-    {
-        PR("| %8s | %4hhu |\n", Insts[i].name, Insts[i].num);
-        PR("|----------|------|\n");
-    }
+    CopyInstructions(Insts);
 
     while ((proc.pc < proc.code_size) && (count_inst_calls <= MAX_INSTRUCTION_CALLS) && (err == 0))
     {
@@ -117,8 +107,10 @@ int RunBin(Processor proc)
         Instruction current = {};
         current.num = (proc.code[proc.pc] & 0x1F);
 
+        // binary search function structure
         Instruction *found = (Instruction *) bsearch(&current, Instructions, COUNT_OF_INSTRUCTIONS, sizeof(Instruction), CompInstUp);
         PR("* found '%s'\n", found->name);
+        // function exe
         err = found->execute(&proc); // call function
     }
 
@@ -136,7 +128,8 @@ int RunBin(Processor proc)
     return err;
 }
 
-// display error codes
+/// @brief display error codes. Don't crush program.
+/// @param err_code code of error.
 void PrintErrorCode(int err_code)
 {
     PRED;
@@ -230,8 +223,10 @@ void PrintErrorCode(int err_code)
     DEF_COL
 }
 
-// return file size in bites
-size_t SizeofFile(const char *file_name)
+/// @brief calculate file size by stat structure
+/// @param file_name file name
+/// @return file size in bites
+ssize_t SizeofFile(const char *file_name)
 {
     PR_FST;
     assert(file_name);
@@ -253,11 +248,19 @@ size_t SizeofFile(const char *file_name)
     return fsize;
 }
 
-// display processor data
+/// @brief display processor data. Debug function. Shows registers, stack, code and current instruction.
+/// @param proc Current processor struct pointer.
 void PR_PROC(Processor *proc)
 {
+    if (_PRT != 1) return;
+
     PYELLOW;
     PR("PROCESSOR:\n");
+    if (proc == NULL) PR("--> Processor pointer is NULL!");
+    if (proc->code == NULL) PR("--> Processor code array is NULL!");
+    assert(proc);
+    assert(proc->code);
+
     PR("* RUN pc = (%zu)\n", proc->pc);
     DEF_COL;
     PR("Code = ");
@@ -286,6 +289,103 @@ void PR_PROC(Processor *proc)
 }
 
 
+/// @brief Std compare Instructions by .num 
+/// @param a Instruction *a
+/// @param b Instruction *b
+/// @return 1 if (a > b); -1 if (a < b); 0 if equal.
+int CompInstUp(const void *a, const void *b) 
+{
+    assert(a);
+    assert(b);
+    const char arg1 = ((const Instruction *)a)->num;
+    const char arg2 = ((const Instruction *)b)->num;
+    // PR("arg1 = %hhu, arg2 = %hhu;\n", arg1, arg2);
+    
+    if (arg1 < arg2) return -1;
+    if (arg1 > arg2) return 1;
+    return 0;
+}
+
+/// @brief compare equal of double
+/// @param arg1 double number
+/// @param arg2 double number
+/// @return true if ((|arg1 - arg2| < EPSILON)
+bool IsEqual(double arg1, double arg2)
+{
+    return (fabs(arg1 - arg2) < EPSILON);
+}
+
+/// @brief copy array of Instructions to another array of Instructions. Size of out array must be larger or equal src array.
+/// @param Insts src - Instruction[]
+/// @return error code
+int CopyInstructions(Instruction *Insts)
+{
+    assert(Insts);
+
+    for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
+        Insts[i] = Instructions[i];
+
+    PR("* RUN qsort...\n");
+    qsort((void *) Insts, COUNT_OF_INSTRUCTIONS, sizeof(Instruction), CompInstUp);
+    PR("* END qsort;\n");
+
+    PR("|----------|------|\n");
+    for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
+    {
+        PR("| %8s | %4hhu |\n", Insts[i].name, Insts[i].num);
+        PR("|----------|------|\n");
+    }
+    return 0;
+}
+
+/// @brief old function which read data from src.txt to binary buffer. Unused.
+/// @param filename string file name.
+/// @param buffer_p buffer pointer.
+/// @param sizeof_buffer variable to get count of read elements.
+/// @return error code
+int ReadTxtFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
+{
+    PR_FST;
+    FILE *Code = fopen(filename, "r");
+
+    PR("* starting calloc...\n");
+    int *buffer = (int *) calloc(BUF_SIZE, sizeof(int)); // FIXME !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    if (buffer == NULL)
+    {
+        printf("--> Buffer creation error (calloc error)!\n");
+    }
+    PR("* calloc comp\n");
+
+    int readmark = 1;
+    *sizeof_buffer = 0;
+    while ((readmark != 0) && (readmark != -1))
+    {
+        PR("current index = [%zu]\n", *sizeof_buffer);
+        readmark = fscanf(Code, "%d", &(buffer[(*sizeof_buffer)]));
+        PR("read (%d)\n", (buffer[(*sizeof_buffer)]));
+        (*sizeof_buffer)++;
+
+        if ((readmark == 1) && ((buffer[(*sizeof_buffer)] == 501)))
+        {
+            readmark = fscanf(Code, "%d", &(buffer[(*sizeof_buffer)]));
+            (*sizeof_buffer)++;
+        }
+    }
+
+    *buffer_p = buffer;
+    (*sizeof_buffer)--; // он считывает конец файла и увеличивает счетчик. чтобы не писать проверку достижения конца на каждом этапе в самом конце вычитаем 1
+
+    PR("sizeof(buffer) = %zu;\n", *sizeof_buffer);
+    PR("buffer =");
+    for (size_t i = 0; i < *sizeof_buffer; i++)
+        PR(" [%d]", buffer[i]);
+    PR(";\n");
+
+    PR_FED;
+    return 0;
+}
+
+
 // PROCESSOR INSTRUCTIONS
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -295,8 +395,13 @@ void PR_PROC(Processor *proc)
 // COMP функции должны обрабатывать после себя такое количество аргументов, сколько ими предусмотрено и возвращать указатель на следующую инструкцию 
 int InstUNKNOWN(Processor *proc)
 {
+    PR_FST;
+    PR_PROC(proc);
+
     printf("--> Unknown instruction!\n");
     return UNKNOWN_COMMAND;
+
+    PR_FED;
 }
 int InstPUSH (Processor *proc)
 {
@@ -373,6 +478,7 @@ int InstPOP  (Processor *proc)
         {
             stack_elem arg = StackPop(&proc->stack);
             PR("* POP (%lg) from stack", arg);
+            return (int)(arg = 0);
         }
         proc->pc++;
     }
@@ -458,7 +564,7 @@ int InstDIV  (Processor *proc)
         stack_elem arg1 = StackPop(&(proc->stack));
         stack_elem arg2 = StackPop(&(proc->stack));
 
-        if (arg1 == 0)
+        if (IsEqual(arg1, 0))
         {
             PRED PR("\n\n--> Division by zero!\n\n  "); DEF_COL
             return DIV_CRUSH;
@@ -541,7 +647,7 @@ int InstRET  (Processor *proc)
 
     if (proc->ret_address.size >= 1)
     {
-        int ret_ad = StackPop(&proc->ret_address);
+        size_t ret_ad = (size_t) StackPop(&proc->ret_address);
         proc->pc = ret_ad;
     }
     else
@@ -583,7 +689,8 @@ int InstSQRT (Processor *proc)
 int InstJMP  (Processor *proc)
 {
     PR_FST;
-    int mark = read_arg;
+    assert(proc);
+    size_t mark = (size_t)read_arg;
     if ((mark >= 0) && (mark < proc->code_size))
     {
         PR("* JMP to pc[%d];\n", mark);
@@ -601,7 +708,8 @@ int InstJMP  (Processor *proc)
 int InstJE   (Processor *proc)
 {
     PR_FST;
-    int st_size = 0;
+    assert(proc);
+    size_t st_size = 0;
     PR_PROC(proc);
     if (((st_size = proc->stack.size) >= 2))
     {
@@ -625,7 +733,8 @@ int InstJE   (Processor *proc)
 int InstJNE  (Processor *proc)
 {
     PR_FST;
-    int st_size = 0;
+    assert(proc);
+    size_t st_size = 0;
     PR_PROC(proc);
     if (((st_size = proc->stack.size) >= 2))
     {
@@ -661,11 +770,12 @@ int InstJNE  (Processor *proc)
 }
 #define JMP_IF(cmp, name){                                                                  \
 PR_FST;                                                                                     \
-int st_size = 0;                                                                            \
+assert(proc);                                                                               \
+size_t st_size = 0;                                                                         \
 PR_PROC(proc);                                                                              \
 if (((st_size = proc->stack.size) >= 2))                                                    \
 {                                                                                           \
-    int mark = read_arg;                                                                    \
+    size_t mark = (size_t)read_arg;                                                            \
     stack_elem el1 = StackPop(&(proc->stack));                                              \
     stack_elem el2 = StackPop(&(proc->stack));                                              \
     PR("* " name " if (%lg " #cmp " %lg)\n", el2, el1);                                     \
@@ -698,21 +808,9 @@ int InstJA   (Processor *proc)
     JMP_IF(>, "JA");
 }
 
-int CompInstUp(const void *a, const void *b) 
-{
-    char arg1 = ((Instruction *)a)->num;
-    char arg2 = ((Instruction *)b)->num;
-    // PR("arg1 = %hhu, arg2 = %hhu;\n", arg1, arg2);
-    
-    if (arg1 < arg2) return -1;
-    if (arg1 > arg2) return 1;
-    return 0;
-}
+//--------------------------------------------------------------------------------------------------
 
-bool IsEqual(double arg1, double arg2)
-{
-    return (fabs(arg1 - arg2) < EPSILON);
-}
+
 
 
 //-----------------------------------------------------------------------------------------------------------------------

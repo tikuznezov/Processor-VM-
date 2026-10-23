@@ -27,7 +27,7 @@ typedef double stack_elem;
 #include    <stdarg.h>
 
 
-// ENUMs and STRUCTs
+// PROCESSOR INSTRUCTIONS
 //-------------------------------------------------------------------------------------------------------------------------------------------------
 
 enum COMMANDS
@@ -82,7 +82,6 @@ enum ERR_CODES
 
 const size_t REG_COUNT = 4;
 const size_t MEM_SIZE  = 100;
-
 struct Processor
 {
     char *code;
@@ -94,23 +93,13 @@ struct Processor
     stack_elem RAM[MEM_SIZE];
 };
 
+/// @brief structure with instruction name, bin code (num), exe function.
 struct Instruction
 {
     const char *name;
     char num;
     int (* execute) (Processor *proc);
 };
-
-struct File_names
-{
-    const char * const src;
-    const char * const t_out;
-    const char * const b_out;
-};
-
-
-// FUNCTOINS
-//-------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 int InstUNKNOWN(Processor *proc);
@@ -135,22 +124,9 @@ int InstCALL (Processor *proc);
 int InstRET  (Processor *proc);
 int InstSQRT (Processor *proc);
 
-size_t SizeofFile(const char *file_name);
 
-void PR_PROC (Processor *proc);
-
-void ClearTerm();
-
-int CompInstUp(const void *a, const void *b);
-
-bool IsEqual(double arg1, double arg2);
-
-
-// CONSTANTS
-//-------------------------------------------------------------------------------------------------------------------------------------------------
-
-const Instruction Instructions[] = 
-{
+/// @brief All instructions array. Used to find command in asm and RunBin.
+const Instruction Instructions[] = {
     {.name = "UNKNOWN", .num = UNKNOWN, .execute = InstUNKNOWN},
 
     {.name = "PUSH",  .num = PUSH,  .execute = InstPUSH },
@@ -175,6 +151,43 @@ const Instruction Instructions[] =
 };
 const int COUNT_OF_INSTRUCTIONS = sizeof(Instructions) / sizeof(Instruction);
 
+
+// ENUMs and STRUCTs
+//-------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+struct File_names
+{
+    const char * const src;
+    const char * const t_out;
+    const char * const b_out;
+};
+
+
+// FUNCTOINS
+//-------------------------------------------------------------------------------------------------------------------------------------------------
+
+ssize_t SizeofFile(const char *file_name);
+
+void PR_PROC (Processor *proc);
+
+void ClearTerm();
+
+int CompInstUp(const void *a, const void *b);
+
+bool IsEqual(double arg1, double arg2);
+
+int CopyInstructions(Instruction *Insts);
+
+int ReadBinFile(const char *filename, char **buffer_p, size_t *sizeof_buffer);
+
+int RunBin(Processor proc);
+
+void PrintErrorCode(int err_code);
+
+
+// CONSTANTS
+//-------------------------------------------------------------------------------------------------------------------------------------------------
 
 const size_t BUF_SIZE = 1000; // FIXME
 
