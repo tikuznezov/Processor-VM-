@@ -95,23 +95,31 @@ int RunBin(Processor proc)
     int count_inst_calls = 0;
     int err = 0;
 
-    // qsort((void *)Instructions, COUNT_OF_INSTRUCTIONS, sizeof(Instruction), CompInstUp);
+    Instruction Insts[COUNT_OF_INSTRUCTIONS] = {};
+    for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
+        Insts[i] = Instructions[i];
 
-    // FIXME bin search
-    while ((proc.pc < proc.code_size) && (count_inst_calls <= MAX_INSTRUCTION_CALLS))
+    PR("* RUN qsort...\n");
+    qsort((void *) Insts, COUNT_OF_INSTRUCTIONS, sizeof(Instruction), CompInstUp);
+    PR("* END qsort;\n");
+
+    PR("|----------|------|\n");
+    for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
+    {
+        PR("| %8s | %4hhu |\n", Insts[i].name, Insts[i].num);
+        PR("|----------|------|\n");
+    }
+
+    while ((proc.pc < proc.code_size) && (count_inst_calls <= MAX_INSTRUCTION_CALLS) && (err == 0))
     {
         count_inst_calls++;
 
-        for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
-        {
-            if ((proc.code[proc.pc] & 0x1F) == ((Instructions[i]).num))
-            {
-                err = (Instructions[i]).execute(&proc); // call function
-                if (err != 0) break;
-            }
-        }
-        if (err != 0)
-            return err;
+        Instruction current = {};
+        current.num = (proc.code[proc.pc] & 0x1F);
+
+        Instruction *found = (Instruction *) bsearch(&current, Instructions, COUNT_OF_INSTRUCTIONS, sizeof(Instruction), CompInstUp);
+        PR("* found '%s'\n", found->name);
+        err = found->execute(&proc); // call function
     }
 
     if (count_inst_calls >= MAX_INSTRUCTION_CALLS)
@@ -125,94 +133,101 @@ int RunBin(Processor proc)
     // она же увеличивает индекс команды на 1 после выполнения. Таким образом джамп впишет нужный индекс и процессор перескочит назад.
 
     PR_FED;
-    return 0;
+    return err;
 }
 
 // display error codes
 void PrintErrorCode(int err_code)
 {
+    PRED;
     switch (err_code)
     {
         case UNKNOWN_CRUSH:
-            PR("--> Error: Unknown operation!\n");
+            printf("--> Error: Unknown operation!\n");
             break;
 
         case PUSH_CRUSH:
-            PR("--> Error in PUSH!\n");
+            printf("--> Error in PUSH!\n");
             break;
 
         case POP_CRUSH:
-            PR("--> Error in POP!\n");
+            printf("--> Error in POP!\n");
             break;
 
         case JMP_CRUSH:
-            PR("--> Error in JMP!\n");
+            printf("--> Error in JMP!\n");
             break;
 
         case JB_CRUSH:
-            PR("--> Error in JB!\n");
+            printf("--> Error in JB!\n");
             break;
 
         case JBE_CRUSH:
-            PR("--> Error in JBE!\n");
+            printf("--> Error in JBE!\n");
             break;
 
         case JE_CRUSH:
-            PR("--> Error in JE!\n");
+            printf("--> Error in JE!\n");
             break;
 
         case JNE_CRUSH:
-            PR("--> Error in JNE!\n");
+            printf("--> Error in JNE!\n");
             break;
 
         case JAE_CRUSH:
-            PR("--> Error in JAE!\n");
+            printf("--> Error in JAE!\n");
             break;
 
         case JA_CRUSH:
-            PR("--> Error in JA!\n");
+            printf("--> Error in JA!\n");
             break;
 
         case ADD_CRUSH:
-            PR("--> Error in ADD!\n");
+            printf("--> Error in ADD!\n");
             break;
 
         case SUB_CRUSH:
-            PR("--> Error in SUB!\n");
+            printf("--> Error in SUB!\n");
             break;
 
         case MUL_CRUSH:
-            PR("--> Error in MUL!\n");
+            printf("--> Error in MUL!\n");
             break;
 
         case DIV_CRUSH:
-            PR("--> Error in DIV!\n");
+            printf("--> Error in DIV!\n");
             break;
 
         case OUT_CRUSH:
-            PR("--> Error in OUT!\n");
+            printf("--> Error in OUT!\n");
             break;
 
         case HLT_CRUSH:
+            PGREEN
             PR("* Program successfully completed.\n");
             break;
 
         case IN_CRUSH:
-            PR("--> Error in IN!\n");
+            printf("--> Error in IN!\n");
             break;
 
         case CALL_CRUSH:
-            PR("--> Error in CALL!\n");
+            printf("--> Error in CALL!\n");
             break;
 
         case RET_CRUSH:
-            PR("--> Error in RET!\n");
+            printf("--> Error in RET!\n");
+            break;
+
+        case SQRT_CRUSH:
+            printf("--> Error in SQRT!\n");
             break;
 
         default:
-            PR("--> Unknown error code: %d!\n", err_code);
+            printf("--> Unknown error code: %d!\n", err_code);
             break;
     }
+    DEF_COL
 }
 
 // return file size in bites
@@ -271,14 +286,13 @@ void PR_PROC(Processor *proc)
 }
 
 
-// PROCESSOR FUNCTIONS
+// PROCESSOR INSTRUCTIONS
 //----------------------------------------------------------------------------------------------------------------------
 
-#define read_arg (proc->code[++proc->pc] << 24) | (proc->code[++proc->pc] << 16) | (proc->code[++proc->pc] << 8) | proc->code[++proc->pc];
+// read 4 char to int
+#define read_arg (int)(((unsigned char)proc->code[++proc->pc] << 24) | ((unsigned char)proc->code[++proc->pc] << 16) | ((unsigned char)proc->code[++proc->pc] << 8) | (unsigned char)proc->code[++proc->pc]);
 
-// COMP функции должны обрабатывать после себя такое количество аргументов, сколько ими предусмотрено и возвращать 
-// указатель на следующую инструкцию 
-
+// COMP функции должны обрабатывать после себя такое количество аргументов, сколько ими предусмотрено и возвращать указатель на следующую инструкцию 
 int InstUNKNOWN(Processor *proc)
 {
     printf("--> Unknown instruction!\n");
@@ -423,7 +437,7 @@ int InstMUL  (Processor *proc)
         stack_elem arg2 = StackPop(&(proc->stack));
 
         StackPush(&(proc->stack), arg1 * arg2);
-        PR("* MUL(%lg * %lg) = ;\n", arg1, arg2, arg1*arg2);
+        PR("* MUL(%lg * %lg) = %lg;\n", arg1, arg2, arg1*arg2);
         proc->pc++;
     }
     else
@@ -435,7 +449,7 @@ int InstMUL  (Processor *proc)
     PR_FED;
     return 0;
 }
-int InstDIV  (Processor *proc) // FIXME div by zero
+int InstDIV  (Processor *proc)
 {
     PR_FST;
     PR_PROC(proc);
@@ -446,7 +460,7 @@ int InstDIV  (Processor *proc) // FIXME div by zero
 
         if (arg1 == 0)
         {
-            PR("--> Division by zero!\n");
+            PRED PR("\n\n--> Division by zero!\n\n  "); DEF_COL
             return DIV_CRUSH;
         }
 
@@ -492,7 +506,7 @@ int InstHLT  (Processor *proc)
     PR_FED;
     return HLT_CRUSH;
 }
-int InstIN   (Processor *proc) // FIXME clean buffer
+int InstIN   (Processor *proc)
 {
     PR_FST;
     PR_PROC(proc);
@@ -548,9 +562,10 @@ int InstSQRT (Processor *proc)
         stack_elem arg1 = StackPop(&(proc->stack));
         if (arg1 < 0)
             return SQRT_CRUSH;
+        PR("* SQRT(%lg) = %lg;\n", arg1, sqrt(arg1));
         stack_elem res = sqrt(arg1);
         StackPush(&(proc->stack), res);
-        PR("* SQRT(%lg) = %lg;\n", arg1, res);
+        
         proc->pc++;
     }
     else
@@ -564,6 +579,74 @@ int InstSQRT (Processor *proc)
 
 // JUMPS
 //--------------------------------------------------------------------------------------------------
+
+int InstJMP  (Processor *proc)
+{
+    PR_FST;
+    int mark = read_arg;
+    if ((mark >= 0) && (mark < proc->code_size))
+    {
+        PR("* JMP to pc[%d];\n", mark);
+        proc->pc = mark;
+    }
+    else
+    {
+        PR("--> Try to JMP[%d] out of bounds!\n", mark);
+        return JMP_CRUSH;
+    }
+    
+    PR_FED;
+    return 0;
+}
+int InstJE   (Processor *proc)
+{
+    PR_FST;
+    int st_size = 0;
+    PR_PROC(proc);
+    if (((st_size = proc->stack.size) >= 2))
+    {
+        stack_elem el1 = StackPop(&(proc->stack));
+        stack_elem el2 = StackPop(&(proc->stack));
+        PR("* JE if (%lg == %lg)\n", el2, el1);
+        if (IsEqual(el1, el2))
+        {
+            return InstJMP(proc);
+        }
+        else {PR("* Comparison is incorrect."); proc->pc += 5;}
+    }
+    else
+    {
+        if (st_size < 2) {PR("--> Try to compare empty stack in JE!\n");}
+        proc->pc += 5;
+    }
+    PR_FED;
+    return 0;
+}
+int InstJNE  (Processor *proc)
+{
+    PR_FST;
+    int st_size = 0;
+    PR_PROC(proc);
+    if (((st_size = proc->stack.size) >= 2))
+    {
+        stack_elem el1 = StackPop(&(proc->stack));
+        stack_elem el2 = StackPop(&(proc->stack));
+        PR("* JNE if (%lg != %lg)\n", el2, el1);
+        if (!IsEqual(el1, el2))
+        {
+            return InstJMP(proc);
+        }
+        else {PR("* Comparison is incorrect."); proc->pc += 5;}
+    }
+    else
+    {
+        if (st_size < 2) {PR("--> Try to compare empty stack in JE!\n");}
+        proc->pc += 5;
+    }
+    PR_FED;
+    return 0;
+}
+
 
 #define JMP_AND_VER(name){                                                                  \
     if ((mark >= 0) && (mark < proc->code_size))                                                \
@@ -598,26 +681,6 @@ PR_FED;                                                                         
 return 0;                                                                                   \
 }
 
-
-int InstJMP  (Processor *proc)
-{
-    PR_FST;
-
-    if ((proc->code[proc->pc + 1] >= 0) && (proc->code[proc->pc + 1] < proc->code_size))
-    {
-        size_t mark = read_arg;
-        PR("* JMP to pc[%d];\n", mark);
-        proc->pc = mark;
-    }
-    else
-    {
-        PR("--> Try to JMP out of bounds!\n");
-        return JMP_CRUSH;
-    }
-
-    PR_FED;
-    return 0;
-}
 int InstJB   (Processor *proc)
 {
     JMP_IF(<, "JB");
@@ -625,14 +688,6 @@ int InstJB   (Processor *proc)
 int InstJBE  (Processor *proc)
 {
     JMP_IF(<=, "JBE");
-}
-int InstJE   (Processor *proc) // FIXME epsilon equal
-{
-    JMP_IF(==, "JE");
-}
-int InstJNE  (Processor *proc)
-{
-    JMP_IF(!=, "JNE");
 }
 int InstJAE  (Processor *proc)
 {
@@ -643,12 +698,12 @@ int InstJA   (Processor *proc)
     JMP_IF(>, "JA");
 }
 
-
 int CompInstUp(const void *a, const void *b) 
 {
-    int arg1 = ((Instruction *)a)->num;
-    int arg2 = ((Instruction *)b)->num;
-
+    char arg1 = ((Instruction *)a)->num;
+    char arg2 = ((Instruction *)b)->num;
+    // PR("arg1 = %hhu, arg2 = %hhu;\n", arg1, arg2);
+    
     if (arg1 < arg2) return -1;
     if (arg1 > arg2) return 1;
     return 0;

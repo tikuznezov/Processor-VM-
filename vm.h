@@ -5,7 +5,7 @@ typedef double stack_elem;
 #define PRINT_ELEM_T(x) printf("%lg", x);
 #define SCANF_ELEM_T(x) scanf("%lg", &x);
 
-#define _PRT 1 //   zero is off \ other is on
+#define _PRT 0 //   zero is off \ other is on
 #define CRUSH_BIN NAN
 
 // #define _DEBUG
@@ -117,8 +117,6 @@ int InstUNKNOWN(Processor *proc);
 
 int InstPUSH (Processor *proc);
 int InstPOP  (Processor *proc);
-int InstPOPr (Processor *proc);
-int InstPUSHr(Processor *proc);
 int InstJMP  (Processor *proc);
 int InstJB   (Processor *proc);
 int InstJBE  (Processor *proc);
@@ -145,11 +143,11 @@ void ClearTerm();
 
 int CompInstUp(const void *a, const void *b);
 
+bool IsEqual(double arg1, double arg2);
+
 
 // CONSTANTS
 //-------------------------------------------------------------------------------------------------------------------------------------------------
-
-// FIXME out of vm.h
 
 const Instruction Instructions[] = 
 {
@@ -180,7 +178,7 @@ const int COUNT_OF_INSTRUCTIONS = sizeof(Instructions) / sizeof(Instruction);
 
 const size_t BUF_SIZE = 1000; // FIXME
 
-const double EPSILON = 0.0001;
+const double EPSILON = 0.001;
 
 const int MAX_INSTRUCTION_CALLS = 500;
 
