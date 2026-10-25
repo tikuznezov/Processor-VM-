@@ -1,8 +1,8 @@
 // #define _DEBUG
 #include "asm.h"
 //------------------------------------------------------------------------------------
+#define _PRT 1 //   zero is off \ other is on
 #include "log.cpp"
-#include "vm.cpp"
 #include "/Applications/VsСode/Onegin/fileread.cpp"
 //------------------------------------------------------------------------------------
 
@@ -12,6 +12,7 @@
 #define stack_elem char
 #define PRINT_ELEM_T(x) printf("%d", x);
 #define SCANF_ELEM_T(x) scanf("%d", &x);
+
 
 
 /*
@@ -77,10 +78,26 @@ InstHash* InitHashT(InstHash *hash_tab)
     PR("* SORTED HASH TABLE:\n")
     for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
     {
-        PR("|----------------|\n");
-        PR("| %8s = %3d |\n", hash_tab[i].inst.name, hash_tab[i].hash);
+        PR("|-----------------|\n");
+        PR("| %8s = %4d |\n", hash_tab[i].inst.name, hash_tab[i].hash);
     }
-    PR("|----------------|\n");
+    PR("|-----------------|\n");
+
+    for (int i = 1; i < COUNT_OF_INSTRUCTIONS; i++)
+    {
+        if (hash_tab[i].hash == hash_tab[i-1].hash)
+        {
+            PRED;
+            PR("--> Find collision!!!\n");
+            PR("\t| Hash_table[%2d] | %8s | %4d |\n", i-1, hash_tab[i-1].inst.name, hash_tab[i-1].hash);
+            PR("\t| Hash_table[%2d] | %8s | %4d |\n", i  , hash_tab[  i].inst.name, hash_tab[  i].hash);
+            DEF_COL;
+        }
+        else
+        {
+            PR("* There's no collisions.\n");
+        }
+    }
     return hash_tab;
 }
 
@@ -301,13 +318,14 @@ uint HashCom(const char *com_name)
     PR("* Hash (%8s) = ", com_name);
     uint len = strnlen(com_name, MAX_COM_LEN);
     uint hash = 0;
+    int p = 53;
+    int m = 9973;
     for (int i = 0; i < len; i++)
     {
-        hash += com_name[i];
+        hash += com_name[i] * pow(p, i);
+        hash %= m;
     }
-    hash %= 51;
-    hash += 6;
-    PR("%3d;\n", hash);
+    PR("%4d;\n", hash);
     return hash;
 }
 
@@ -328,61 +346,6 @@ Instruction GetCommandV2(const char *command)
     }
     PR_FED;
     return Instructions[0];
-}
-
-int GetCommandV1(const char *str)
-{
-    PR_FST
-
-    int com = UNKNOWN;
-    size_t len = StrLen(str);
-
-    if (_PRT)
-    {
-        PR("str = <")
-        for (size_t i = 0; i < len; i++)
-            PR("%c", str[i]);
-        PR(">\n");
-        PR("len = %zu;\n", len);
-    }
-
-    if ((len >= 4) && !strncmp(str, "PUSH", 4))
-    {
-        com = PUSH;
-        PR("* get PUSH\n");
-    }
-    else if ((len >= 3) && !strncmp(str, "ADD", 3))
-    {
-        com = ADD;
-        PR("* get ADD\n");
-    }
-    else if ((len >= 3) && !strncmp(str, "DIV", 3))
-    {
-        com = DIV;
-        PR("* get DIV\n");
-    }
-    else if ((len >= 3) && !strncmp(str, "OUT", 3))
-    {
-        com = OUT;
-        PR("* get OUT\n");
-    }
-    else if ((len >= 3) && !strncmp(str, "HLT", 3))
-    {
-        com = HLT;
-        PR("* get HLT\n");
-    }
-    else if ((len >= 3) && !strncmp(str, "SUB", 3))
-    {
-        com = SUB;
-        PR("* get SUB\n");
-    }
-    else
-    {
-        // FIXME add line and file name
-        PR("--> Unknown command!\n");
-    }
-    PR_FED;
-    return com;
 }
 
 int GetValue(const char *str)

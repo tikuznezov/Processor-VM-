@@ -1,19 +1,42 @@
+#define _VM
 #include "vm.h"
 #include "log.cpp"
-#include "/Applications/VsСode/Stack/stack.h"
-#include "/Applications/VsСode/Stack/stack.cpp"
+#include "Stack/stack.cpp"
 
+#include "raylib.h"
 int error = 0;
 
-// считывает все в указанный буфер
+// считывает все в указанн`ый буфер
 // читает аргументы и команды в массив интов
 
-// // TODO file info, watermark, header
-
+// TODO file info, watermark, header
+// TODO битовые поля
+// TODO intel file listing
 
 // MAIN
 //-----------------------------------------------------------------------------------------------------------------------
 
+int main(int argc, char *argv[])
+{
+    const char *src_bin = (argc > 1) ? argv[1] : "code.bin";
+    // const char *src_txt = (argc > 1) ? argv[1] : "code.txt";
+    int err = 0;
+    Processor proc = {};
+
+    ReadBinFile(src_bin, &(proc.code), &(proc.code_size));
+    // ReadTxtFile(src_txt, &(proc.code), &(proc.code_size));
+    err = RunBin(proc);
+
+    if (err != 0)
+    {
+        if (err != HLT_CRUSH) PRED;
+        PR("* Completed 'RunBin'.\n");
+        PrintErrorCode(err);
+        DEF_COL;
+    }
+
+    return 0;
+}
 
 // FUNCTIONS
 //-----------------------------------------------------------------------------------------------------------------------
@@ -408,7 +431,7 @@ int InstPUSH (Processor *proc)
     else if (proc->code[proc->pc] & 0x20)
     {
         int mem_i = read_arg;
-        stack_elem arg = proc->RAM[mem_i];
+        stack_elem arg = proc->ram[mem_i];
         PR("* PUSH from RAM[%d] (%lg);\n", mem_i, arg);
         StackPush(&(proc->stack), arg);
     }
@@ -450,7 +473,7 @@ int InstPOP  (Processor *proc)
         {
             int mem_i = read_arg;
             stack_elem arg = StackPop(&(proc->stack));
-            proc->RAM[mem_i] = arg;
+            proc->ram[mem_i] = arg;
             PR("* POP to RAM[%d] (%lg);\n", mem_i, arg);
         }
         else
@@ -787,10 +810,47 @@ int InstJA   (Processor *proc)
     JMP_IF(>, "JA");
 }
 
+// DISPLAY FUNCTIONS
 //--------------------------------------------------------------------------------------------------
 
+#define InWind(x_len, y_len, name) InitWindow(x_len, y_len, name); window_state = true;
 
+#define ClWind CloseWindow(); window_state = false;
 
+int InstDISP (Processor *proc)
+{
+    PR_FST;
+    PR_PROC(proc);
+
+    for (int y = 0; y < SC_HEIGHT; y++)
+    {
+        for (int x = 0; x < SC_WEIGHT; x++)
+        {
+            switch ((int) (proc->ram[y*SC_WEIGHT + x]))
+            {
+                case 1:
+                {
+                    printf("&");
+                    break;
+                }
+                case 0:
+                {
+                    printf("`");
+                    break;
+                }
+                default:
+                {
+                    printf(".");
+                    break;
+                }
+            }
+        }
+        printf("\n");
+    }
+    proc->pc++;
+
+    PR_FED;
+    return 0;
+}
 
 //-----------------------------------------------------------------------------------------------------------------------
-

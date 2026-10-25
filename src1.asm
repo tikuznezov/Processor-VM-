@@ -18,6 +18,7 @@ PUSH ax
 PUSH cx
 JB :2
 
+DISP
 CALL :3
 HLT
 
