@@ -1,4 +1,5 @@
-#include "vm.h"
+#include "instructions.h"
+// #include "vm.h"
 #include "/Applications/VsСode/Onegin/onegin.h"
 
 // CONSTANTS
@@ -8,6 +9,13 @@ struct InstHash
 {
     uint hash;
     Instruction inst;
+};
+
+struct File_names
+{
+    const char * const src;
+    const char * const t_out;
+    const char * const b_out;
 };
 
 const size_t MAX_COM_LEN = 10;

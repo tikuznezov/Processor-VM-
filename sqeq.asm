@@ -88,8 +88,11 @@ HLT
 
 :6 ; a == 0, b == 0
 PUSH 0
-PUSH 0
-PUSH 0
+PUSH cx
+JNE :3
+PUSH 8
+PUSH 8
+PUSH 8
 OUT
 OUT
 OUT
