@@ -1,24 +1,24 @@
 IN
 
-CALL :1
+CALL :factorial
 OUT
 HLT
 
 
-:1
+:factorial
 POP ax
 PUSH ax
 PUSH 1
-JNE :2
+JNE :NE_1
 
 PUSH 1 ; случай равенства единице
 RET
 
-:2     ; не равно единице
+:NE_1     ; не равно единице
 PUSH ax
 PUSH ax
 PUSH 1
 SUB
-CALL :1
+CALL :factorial
 MUL
 RET

@@ -19,6 +19,7 @@
 #endif
 
 #if (_PRT == 1)
+    #define PAUSE ClearTerm();
     #define PR(name, ...)                                                                               \
         printf(name, ## __VA_ARGS__);
     #define PR_FST                                                                                      \
@@ -28,13 +29,14 @@
         printf("\n- END %s;\n", __FUNCTION__); ClearTerm();                                             \
         printf("----------------------------------------------------------------------------------\n");
 #else
+    #define PAUSE
     #define PR(name, ...)
     #define PR_FST
     #define PR_FED
 #endif
 
 // очищает ввод терминала
-void ClearTerm()
+void ClearTerm(void)
 {
     int symbol = 0;
     while ((symbol != EOF) && (symbol != '\n'))

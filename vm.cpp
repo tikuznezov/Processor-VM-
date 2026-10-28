@@ -411,9 +411,19 @@ int InstPUSH (Processor *proc)
 
     PR_PROC(proc);
 
+    // MEMORY[REGISTER]
+    if ((proc->code[proc->pc] & 0x60) == 0x60)
+    {
+        int reg_index = (int) read_arg;
+        int mem_index = (int) proc->reg[reg_index];
+
+        stack_elem arg = proc->ram[mem_index];
+        PR("* PUSH from RAM[%cx] (%lg);\n", reg_index + 'a', arg);
+        StackPush(&(proc->stack), arg);
+    }
 
     // STACK
-    if (proc->code[proc->pc] & 0x80)
+    else if (proc->code[proc->pc] & 0x80)
     {
         int arg = read_arg;
         PR("* PUSH to stack (%d);\n", arg);
@@ -636,7 +646,7 @@ int InstCALL (Processor *proc)
     PR_FST;
     PR_PROC(proc);
 
-    StackPush(&proc->ret_address, proc->pc + 5);
+    StackPush(&proc->ret_address, proc->pc + COM_LEN + ARG_LEN);
     int err = InstJMP(proc);
 
     PR_FED;
@@ -722,12 +732,12 @@ int InstJE   (Processor *proc)
         {
             return InstJMP(proc);
         }
-        else {PR("* Comparison is incorrect."); proc->pc += 5;}
+        else {PR("* Comparison is incorrect."); proc->pc += COM_LEN + ARG_LEN;}
     }
     else
     {
         if (st_size < 2) {PR("--> Try to compare empty stack in JE!\n");}
-        proc->pc += 5;
+        proc->pc += COM_LEN + ARG_LEN;
     }
     PR_FED;
     return 0;
@@ -747,12 +757,12 @@ int InstJNE  (Processor *proc)
         {
             return InstJMP(proc);
         }
-        else {PR("* Comparison is incorrect."); proc->pc += 5;}
+        else {PR("* Comparison is incorrect."); proc->pc += COM_LEN + ARG_LEN;}
     }
     else
     {
         if (st_size < 2) {PR("--> Try to compare empty stack in JE!\n");}
-        proc->pc += 5;
+        proc->pc += COM_LEN + ARG_LEN;
     }
     PR_FED;
     return 0;
@@ -777,17 +787,17 @@ size_t st_size = 0;                                                             
 PR_PROC(proc);                                                                              \
 if (((st_size = proc->stack.size) >= 2))                                                    \
 {                                                                                           \
-    size_t mark = (size_t)read_arg;                                                            \
+    size_t mark = (size_t)read_arg;                                                         \
     stack_elem el1 = StackPop(&(proc->stack));                                              \
     stack_elem el2 = StackPop(&(proc->stack));                                              \
     PR("* " name " if (%lg " #cmp " %lg)\n", el2, el1);                                     \
     if (el2 cmp el1) {JMP_AND_VER(name);}                                                   \
-    else {PR("* Comparison is incorrect."); proc->pc += 1;}                                 \
+    else {PR("* Comparison is incorrect."); proc->pc += COM_LEN;}                           \
 }                                                                                           \
 else                                                                                        \
 {                                                                                           \
     if (st_size < 2) {PR("--> Try to compare empty stack in " name "!\n");}                 \
-    proc->pc += 5;                                                                          \
+    proc->pc += COM_LEN + ARG_LEN;                                                          \
 }                                                                                           \
 PR_FED;                                                                                     \
 return 0;                                                                                   \
@@ -846,6 +856,7 @@ int InstDISP (Processor *proc)
             }
         }
         printf("\n");
+        // sleep(1);
     }
     proc->pc++;
 

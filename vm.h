@@ -5,7 +5,7 @@ typedef double stack_elem;
 #define PRINT_ELEM_T(x) printf("%lg", x);
 #define SCANF_ELEM_T(x) scanf("%lg", &x);
 
-#define _PRT 0 //   zero is off \ other is on
+#define _PRT 1 //   zero is off \ other is on
 #define CRUSH_BIN NAN
 
 // #define _DEBUG
@@ -86,6 +86,9 @@ const size_t BUF_SIZE = 1000; // FIXME
 const double EPSILON = 0.001;
 
 const int MAX_INSTRUCTION_CALLS = 500;
+
+const size_t COM_LEN = 1;
+const size_t ARG_LEN = 4;
 
 #endif
 

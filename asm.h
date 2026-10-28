@@ -18,6 +18,14 @@ struct File_names
     const char * const b_out;
 };
 
+
+struct Label
+{
+    int hash;
+    char name[MAX_STR_LENGTH];
+    int link_command;
+};
+
 const size_t MAX_COM_LEN = 10;
 
 const int    UNREAD_VAL  = -27394383;
@@ -43,16 +51,18 @@ InstHash* InitHashT(InstHash *hash_tab);
 
 int GetArgs(char *str_beg, int *labels, int *arg1, char *com_num);
 
-bool FindLabel(char *str_beg, int *label, int *labels, int cur_com_num, size_t string_num);
+bool FindLabel(char *str_beg, Label *labels, int cur_com_num, size_t string_num, size_t *free_label_index);
 
-int AsmReadWrite(File *src, File_names fname, int *labels, InstHash *hash_tab);
+int AsmReadWrite(File *src, File_names fname, Label *labels, InstHash *hash_tab);
 
 bool FindJmp(char *str_beg, int *labels, int *cur_com_num, Instruction *cur_com, FILE *txt_out, int bin_out);
 
 bool FindInst(int arg1, int count_read_el, int *cur_com_num, Instruction *cur_com, FILE *txt_out, int bin_out);
 
-uint HashCom(const char *com_name);
+uint HashString(const char *com_name);
 
 int CompUInt(const void *a, const void *b);
+
+void PrintLabels(Label *labels);
 
 //-------------------------------------------------------------------------------------------------------------------------------------------------
