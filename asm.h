@@ -43,9 +43,9 @@ void ClearTerm();
 
 int GetCommandV1(const char *str);
 
-int GetValue(const char *str);
+Instruction GetCommand(const char *str_beg, const InstHash *hash_tab);
 
-Instruction GetCommand(const char *str_beg, InstHash *hash_tab);
+int GetValue(const char *str);
 
 InstHash* InitHashT(InstHash *hash_tab);
 

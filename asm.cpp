@@ -1,7 +1,7 @@
 // #define _DEBUG
 #include "asm.h"
 //------------------------------------------------------------------------------------
-#define _PRT 1 //   zero is off \ other is on
+#define _PRT 0 //   zero is off \ other is on
 #include "log.cpp"
 #include "/Applications/VsСode/Onegin/fileread.cpp"
 //------------------------------------------------------------------------------------
@@ -89,29 +89,31 @@ InstHash* InitHashT(InstHash *hash_tab)
             PR("| %8s = %4d |\n", hash_tab[i].inst.name, hash_tab[i].hash);
         }
         PR("|-----------------|\n");
-
-        for (int i = 1; i < COUNT_OF_INSTRUCTIONS; i++)
-        {
-            if (hash_tab[i].hash == hash_tab[i-1].hash)
-            {
-                PRED;
-                PR("--> Find collision!!!\n");
-                PR("\t| Hash_table[%2d] | %8s | %4d |\n", i-1, hash_tab[i-1].inst.name, hash_tab[i-1].hash);
-                PR("\t| Hash_table[%2d] | %8s | %4d |\n", i  , hash_tab[  i].inst.name, hash_tab[  i].hash);
-                DEF_COL;
-            }
-            else
-            {
-                if (i == COUNT_OF_INSTRUCTIONS-1)
-                    PR("* There's no collisions.\n");
-            }
-        }
+    #else
+        qsort(hash_tab, COUNT_OF_INSTRUCTIONS, sizeof(InstHash), CompUInt);
     #endif
+
+    for (int i = 1; i < COUNT_OF_INSTRUCTIONS; i++)
+    {
+        if (hash_tab[i].hash == hash_tab[i-1].hash)
+        {
+            PRED;
+            printf("--> Find collision!!!\n");
+            PR("\t| Hash_table[%2d] | %8s | %4d |\n", i-1, hash_tab[i-1].inst.name, hash_tab[i-1].hash);
+            PR("\t| Hash_table[%2d] | %8s | %4d |\n", i  , hash_tab[  i].inst.name, hash_tab[  i].hash);
+            DEF_COL;
+        }
+        else
+        {
+            if (i == COUNT_OF_INSTRUCTIONS-1)
+                PR("* There's no collisions.\n");
+        }
+    }
 
     return hash_tab;
 }
 
-Instruction GetCommand(const char *str_beg, InstHash *hash_tab)
+Instruction GetCommand(const char *str_beg, const InstHash *hash_tab)
 {
     assert(str_beg);
     assert(hash_tab);
@@ -120,9 +122,9 @@ Instruction GetCommand(const char *str_beg, InstHash *hash_tab)
 
     char inst_name[MAX_COM_LEN] = "";
 
-    if (sscanf(str_beg, "%[A-Z]", inst_name))
+    if (sscanf(str_beg, "%[A-Z]", inst_name) == 1)
     {
-        PR("\n* Inst %s;\n", inst_name);
+        PR("\n* Inst \"%s\";\n", inst_name);
         uint hash = HashString(inst_name);
         InstHash *found = (InstHash*) bsearch(&hash, hash_tab, COUNT_OF_INSTRUCTIONS, sizeof(InstHash), CompUInt);
         if (found != NULL)
@@ -302,14 +304,14 @@ int GetArgs(char *string_begin, Label *labels, int *arg1, char *com_num)
 
             if (scanf_mark == 1)
             {
-                FINDEND;
+                // FINDEND;
                 *arg1 = reg_index;
                 PR("* MEM access [ reg[%d] ] <=> [%cx];\n", *arg1, str_arg[0]);
                 read_el_c++;
             }
             else if (scanf_mark == 2)
             {
-                FINDEND;
+                // FINDEND;
                 *arg1 = reg_index + int_arg;
                 PR("* MEM access [ reg[%d] ] <=> [%cx + %d];\n", *arg1, str_arg[0], int_arg);
                 read_el_c++;
@@ -323,7 +325,7 @@ int GetArgs(char *string_begin, Label *labels, int *arg1, char *com_num)
             {
                 FINDEND;
                 *arg1 = (int) str_arg[0];
-                PR("* REG access [%d] = %cx;\n", *arg1 - 'a', *arg1);
+                PR("* REG[%d] access = %cx;\n", *arg1 - 'a', *arg1);
                 *arg1 = *arg1 - 'a';
                 *com_num |= 0x40;
                 read_el_c++;

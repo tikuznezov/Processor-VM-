@@ -50,6 +50,15 @@ int ReadBinFile(const char *filename, char **buffer_p, size_t *sizeof_buffer)
 
     int src_file = open(filename, O_RDONLY);
 
+    if (src_file == -1)
+    {
+        PRED
+        printf("Error opening file: \"%s\";\n", filename);
+        perror("");
+        DEF_COL
+        return -1; // FIXME err code
+    }
+
     // creation code buffer
     ssize_t buf_size = SizeofFile(filename);
     if (buf_size == -1)
@@ -66,7 +75,7 @@ int ReadBinFile(const char *filename, char **buffer_p, size_t *sizeof_buffer)
     PR("* Code buffer successfully created.\n");
 
     ssize_t read_bite_count = read(src_file, buffer, (size_t)buf_size);
-    PR("* Count of read byte from binary file = %zu.\n", read_bite_count);
+    PR("* Count of read byte from binary file = %zd.\n", read_bite_count);
     if (read_bite_count != buf_size)
     {
         PR("--> The file was not read to the end!\n")
@@ -119,7 +128,7 @@ int RunBin(Processor proc)
     if (count_inst_calls >= MAX_INSTRUCTION_CALLS)
     {
         PRED;
-        PR("--> The maximum number of instruction calls has been exceeded!!!\n")
+        printf("--> The maximum number of instruction calls has been exceeded!!!\n");
         DEF_COL;
     }
 
@@ -239,7 +248,7 @@ ssize_t SizeofFile(const char *file_name)
     if (stat(file_name, &statistics) == 0)
     {
         fsize = (ssize_t)statistics.st_size;
-        PR("Размер файла: %zu байт\n", (long)fsize);
+        PR("Размер файла: %zd байт\n", fsize);
     }
     else 
     {
@@ -266,19 +275,19 @@ void PR_PROC(Processor *proc)
     PR("* RUN pc = (%zu)\n", proc->pc);
     DEF_COL;
     PR("Code = ");
-    for (int i = 0; i < proc->code_size; i++)
+    for (size_t i = 0; i < proc->code_size; i++)
     {
         if (i == proc->pc) PRED;
         PR("[%d]", proc->code[i])
         if (i == proc->pc) DEF_COL;
     }
     PR("\n");
-    for (int i = 0; i < sizeof(proc->reg)/sizeof(proc->reg[0]); i++)
-        PR("Reg[%c] = %lg;\n", i + 'A', (double)proc->reg[i]);
+    for (int i = 0; i < (int) (sizeof(proc->reg)/sizeof(proc->reg[0])); i++)
+        PR("Reg[%c] = %lg;\n", i + 'a', (double)proc->reg[i]);
 
 
     PR("Stack = ");
-    for (int i = 0; i < proc->stack.size; i++)
+    for (size_t i = 0; i < proc->stack.size; i++)
     {
         PR("[%lg] ", proc->stack.data[i])
     }
@@ -464,8 +473,18 @@ int InstPOP  (Processor *proc)
     if (proc->stack.size > 0)
     {
         PR("Stack size = %zu;\n", proc->stack.size);
+
+        if (((proc->code[proc->pc] & 0x60)) == 0x60)
+        {
+            int reg_index = (int) read_arg;
+            int mem_index = (int) proc->reg[reg_index];
+
+            stack_elem arg = StackPop(&(proc->stack));
+            proc->ram[mem_index] = arg;
+            PR("* POP to RAM[%d] <=> RAM[%cx] = (%lg);\n", mem_index, reg_index + 'a', arg);
+        }
         // STACK
-        if (proc->code[proc->pc] & 0x80)
+        else if (proc->code[proc->pc] & 0x80)
         {
             PR("--> POP has stack arguments!\n");
             return 1;
@@ -705,12 +724,12 @@ int InstJMP  (Processor *proc)
     size_t mark = (size_t)read_arg;
     if ((mark >= 0) && (mark < proc->code_size))
     {
-        PR("* JMP to pc[%d];\n", mark);
+        PR("* JMP to pc[%zu];\n", mark);
         proc->pc = mark;
     }
     else
     {
-        PR("--> Try to JMP[%d] out of bounds!\n", mark);
+        PR("--> Try to JMP[%zu] out of bounds!\n", mark);
         return JMP_CRUSH;
     }
     

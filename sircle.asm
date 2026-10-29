@@ -1,13 +1,25 @@
-PUSH 1
+PUSH 0
 POP ax
 
+IN
+POP bx
 
-PUSH [ax]
-POP [ax + 1]
+:if
+PUSH ax
+PUSH bx
 
-JMP :porno
+JB :print
 
 DISP
 HLT
 
-:porno
+:print
+PUSH 1
+POP [ax]
+
+PUSH 1
+PUSH ax
+ADD
+POP ax
+
+JMP :if
