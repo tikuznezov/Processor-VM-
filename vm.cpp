@@ -23,7 +23,12 @@ int main(int argc, char *argv[])
     int err = 0;
     Processor proc = {};
 
-    ReadBinFile(src_bin, &(proc.code), &(proc.code_size));
+    err = ReadBinFile(src_bin, &(proc.code), &(proc.code_size));
+    if (err != 0)
+    {
+        PrintErrorCode(err);
+        return FILE_OPEN_CRUSH;
+    }
     // ReadTxtFile(src_txt, &(proc.code), &(proc.code_size));
     err = RunBin(proc);
 
@@ -56,7 +61,7 @@ int ReadBinFile(const char *filename, char **buffer_p, size_t *sizeof_buffer)
         printf("Error opening file: \"%s\";\n", filename);
         perror("");
         DEF_COL
-        return -1; // FIXME err code
+        return FILE_OPEN_CRUSH;
     }
 
     // creation code buffer
@@ -227,6 +232,9 @@ void PrintErrorCode(int err_code)
             printf("--> Error in SQRT!\n");
             break;
 
+        case FILE_OPEN_CRUSH:
+            printf("--> File wasn'n open!\n");
+
         default:
             printf("--> Unknown error code: %d!\n", err_code);
             break;
@@ -354,54 +362,54 @@ int CopyInstructions(Instruction *Insts)
 /// @param buffer_p buffer pointer.
 /// @param sizeof_buffer variable to get count of read elements.
 /// @return error code
-int ReadTxtFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
-{
-    PR_FST;
-    FILE *Code = fopen(filename, "r");
-
-    PR("* starting calloc...\n");
-    int *buffer = (int *) calloc(BUF_SIZE, sizeof(int)); // FIXME !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    if (buffer == NULL)
-    {
-        printf("--> Buffer creation error (calloc error)!\n");
-    }
-    PR("* calloc comp\n");
-
-    int readmark = 1;
-    *sizeof_buffer = 0;
-    while ((readmark != 0) && (readmark != -1))
-    {
-        PR("current index = [%zu]\n", *sizeof_buffer);
-        readmark = fscanf(Code, "%d", &(buffer[(*sizeof_buffer)]));
-        PR("read (%d)\n", (buffer[(*sizeof_buffer)]));
-        (*sizeof_buffer)++;
-
-        if ((readmark == 1) && ((buffer[(*sizeof_buffer)] == 501)))
-        {
-            readmark = fscanf(Code, "%d", &(buffer[(*sizeof_buffer)]));
-            (*sizeof_buffer)++;
-        }
-    }
-
-    *buffer_p = buffer;
-    (*sizeof_buffer)--; // он считывает конец файла и увеличивает счетчик. чтобы не писать проверку достижения конца на каждом этапе в самом конце вычитаем 1
-
-    PR("sizeof(buffer) = %zu;\n", *sizeof_buffer);
-    PR("buffer =");
-    for (size_t i = 0; i < *sizeof_buffer; i++)
-        PR(" [%d]", buffer[i]);
-    PR(";\n");
-
-    PR_FED;
-    return 0;
-}
+// int ReadTxtFile(const char *filename, int **buffer_p, size_t *sizeof_buffer)
+// {
+//     PR_FST;
+//     FILE *Code = fopen(filename, "r");
+//
+//     PR("* starting calloc...\n");
+//     int *buffer = (int *) calloc(BUF_SIZE, sizeof(int));
+//     if (buffer == NULL)
+//     {
+//         printf("--> Buffer creation error (calloc error)!\n");
+//     }
+//     PR("* calloc comp\n");
+//
+//     int readmark = 1;
+//     *sizeof_buffer = 0;
+//     while ((readmark != 0) && (readmark != -1))
+//     {
+//         PR("current index = [%zu]\n", *sizeof_buffer);
+//         readmark = fscanf(Code, "%d", &(buffer[(*sizeof_buffer)]));
+//         PR("read (%d)\n", (buffer[(*sizeof_buffer)]));
+//         (*sizeof_buffer)++;
+//
+//         if ((readmark == 1) && ((buffer[(*sizeof_buffer)] == 501)))
+//         {
+//             readmark = fscanf(Code, "%d", &(buffer[(*sizeof_buffer)]));
+//             (*sizeof_buffer)++;
+//         }
+//     }
+//
+//     *buffer_p = buffer;
+//     (*sizeof_buffer)--; // он считывает конец файла и увеличивает счетчик. чтобы не писать проверку достижения конца на каждом этапе в самом конце вычитаем 1
+//
+//     PR("sizeof(buffer) = %zu;\n", *sizeof_buffer);
+//     PR("buffer =");
+//     for (size_t i = 0; i < *sizeof_buffer; i++)
+//         PR(" [%d]", buffer[i]);
+//     PR(";\n");
+//
+//     PR_FED;
+//     return 0;
+// }
 
 
 // PROCESSOR INSTRUCTIONS
 //----------------------------------------------------------------------------------------------------------------------
 
 // read 4 char to int
-#define read_arg (int)(((unsigned char)proc->code[++proc->pc] << 24) | ((unsigned char)proc->code[++proc->pc] << 16) | ((unsigned char)proc->code[++proc->pc] << 8) | (unsigned char)proc->code[++proc->pc]);
+#define read_arg (((unsigned char)proc->code[++proc->pc] << 24) | ((unsigned char)proc->code[++proc->pc] << 16) | ((unsigned char)proc->code[++proc->pc] << 8) | (unsigned char)proc->code[++proc->pc]);
 
 // COMP функции должны обрабатывать после себя такое количество аргументов, сколько ими предусмотрено и возвращать указатель на следующую инструкцию 
 int InstUNKNOWN(Processor *proc)
@@ -434,14 +442,14 @@ int InstPUSH (Processor *proc)
     // STACK
     else if (proc->code[proc->pc] & 0x80)
     {
-        int arg = read_arg;
+        int arg = (int) read_arg;
         PR("* PUSH to stack (%d);\n", arg);
         StackPush(&(proc->stack), arg);
     }
     // REGISTER
     else if (proc->code[proc->pc] & 0x40)
     {
-        int reg_i = read_arg;
+        int reg_i = (int) read_arg;
         stack_elem arg = proc->reg[reg_i];
         PR("* PUSH from REG[%cx] (%lg);\n", reg_i + 'a', arg);
         StackPush(&(proc->stack), arg);
@@ -449,7 +457,7 @@ int InstPUSH (Processor *proc)
     // MEMORY
     else if (proc->code[proc->pc] & 0x20)
     {
-        int mem_i = read_arg;
+        int mem_i = (int) read_arg;
         stack_elem arg = proc->ram[mem_i];
         PR("* PUSH from RAM[%d] (%lg);\n", mem_i, arg);
         StackPush(&(proc->stack), arg);
@@ -492,7 +500,7 @@ int InstPOP  (Processor *proc)
         // REGISTER
         else if (proc->code[proc->pc] & 0x40)
         {
-            int reg_i = read_arg;
+            int reg_i = (int) read_arg;
             stack_elem arg = StackPop(&(proc->stack));
             proc->reg[reg_i] = arg;
             PR("* POP to REG[%cx] (%lg);\n", reg_i + 'a', arg);
@@ -500,7 +508,7 @@ int InstPOP  (Processor *proc)
         // MEMORY
         else if (proc->code[proc->pc] & 0x20)
         {
-            int mem_i = read_arg;
+            int mem_i = (int) read_arg;
             stack_elem arg = StackPop(&(proc->stack));
             proc->ram[mem_i] = arg;
             PR("* POP to RAM[%d] (%lg);\n", mem_i, arg);
@@ -683,7 +691,7 @@ int InstRET  (Processor *proc)
     }
     else
     {
-        PR("--> Try POP empty stack in RET!\n");
+        printf("--> Try POP empty stack in RET!\n");
         return RET_CRUSH;
     }
 
@@ -877,6 +885,7 @@ int InstDISP (Processor *proc)
         printf("\n");
         // sleep(1);
     }
+    printf("\n");
     proc->pc++;
 
     PR_FED;

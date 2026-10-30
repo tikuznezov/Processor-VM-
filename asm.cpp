@@ -1,7 +1,7 @@
 // #define _DEBUG
 #include "asm.h"
 //------------------------------------------------------------------------------------
-#define _PRT 0 //   zero is off \ other is on
+#define _PRT 1 //   zero is off \ other is on
 #include "log.cpp"
 #include "/Applications/VsСode/Onegin/fileread.cpp"
 //------------------------------------------------------------------------------------
@@ -26,6 +26,20 @@
 ! реализовать запись бинарника без разбиения на строки 
 
 git clone git@github.com:tikuznezov/Processor-VM-.git
+*/
+
+// TODO listing:
+/*
+/==================|===========|===========================\
+|   string + args  |  HEX code |        wrote instruction  |
+|------------------|-----------|---------------------------|
+...
+|------------------|-----------|---------------------------|
+|   string + args  |  HEX code |        wrote instruction  |
+\------------------|-----------|---------------------------/
+
+исходная строка, какой инструкцией стала, код инструкции
+TODO add instruction number, mem address
 */
 
 // COMP cut to func
@@ -85,10 +99,10 @@ InstHash* InitHashT(InstHash *hash_tab)
         PR("* SORTED HASH TABLE:\n")
         for (int i = 0; i < COUNT_OF_INSTRUCTIONS; i++)
         {
-            PR("|-----------------|\n");
-            PR("| %8s = %4d |\n", hash_tab[i].inst.name, hash_tab[i].hash);
+            PR("|-----------------------|\n");
+            PR("| %8s = %10d |\n", hash_tab[i].inst.name, hash_tab[i].hash);
         }
-        PR("|-----------------|\n");
+        PR("|-----------------------|\n");
     #else
         qsort(hash_tab, COUNT_OF_INSTRUCTIONS, sizeof(InstHash), CompUInt);
     #endif
@@ -367,6 +381,7 @@ int GetArgs(char *string_begin, Label *labels, int *arg1, char *com_num)
                 read_el_c++;
             }
         }
+        // Error
         else
         {
             // PYELLOW PR("<%s>\n", str_beg); DEF_COL
@@ -394,7 +409,6 @@ size_t StrLen(const char *str)
 
 int AsmReadWrite(File *src, File_names fname, Label *labels, InstHash *hash_tab)
 {
-
     // FILE *txt_out = fopen(fname.t_out, "w");
     int bin_out = open(fname.b_out, O_TRUNC | O_CREAT | O_WRONLY, 0755);
     File bin = {};
@@ -458,13 +472,18 @@ int AsmReadWrite(File *src, File_names fname, Label *labels, InstHash *hash_tab)
 void PrintLabels(Label *labels)
 {
     PR("\nLabels array:\n")
-    PR("/-------NAME-|--HASH-|--LINK-\\\n");
+    PR("/-------------NAME-----|----HASH----|--LINK-\\\n");
     for (size_t i = 0; i < LABELS_COUNT; i++)
     {
-        PR("|------------|-------|-------|\n");
-        PR("| %10s | %5d | %5d |\n", labels[i].name, labels[i].hash, labels[i].link_command);
+        PR("|----------------------|------------|-------|\n");
+        PR("| %20s | %10d | %5d |\n", labels[i].name, labels[i].hash, labels[i].link_command);
     }
-    PR("\\------------|-------|-------/\n");
+    PR("\\----------------------|------------|-------/\n");
+
+    for (size_t i = 1; i < LABELS_COUNT; i++)
+    {
+        
+    }
 }
 
 bool FindLabel(char *str_beg, Label *labels, int cur_index, size_t string_num, size_t *free_index)
@@ -497,16 +516,19 @@ uint HashString(const char *com_name)
 {
     PR("* Hash (%8s) = ", com_name);
     uint len = strnlen(com_name, MAX_COM_LEN);
-    uint hash = 0;
-    int p = 53;
-    int m = 9973;
-    for (int i = 0; i < len; i++)
+
+    unsigned long long hash = 0;
+    unsigned long long p = 53;
+    unsigned long long m = 2147483647;
+
+    for (size_t i = 0; i < len; i++)
     {
-        hash += com_name[i] * pow(p, i);
-        hash %= m;
+        hash = (hash * p + (unsigned char)com_name[i]) % m;
     }
-    PR("%4d;\n", hash);
-    return hash;
+
+    PR("%lld;\n", hash);
+    return (uint)hash;
+
 }
 
 Instruction GetCommandV2(const char *command)

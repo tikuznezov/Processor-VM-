@@ -32,9 +32,9 @@ typedef double stack_elem;
 // ENUMs and STRUCTs
 //-------------------------------------------------------------------------------------------------------------------------------------------------
 
-const size_t REG_COUNT = 4;
+const size_t REG_COUNT = 6;
 const int SC_WEIGHT = 60;
-const int SC_HEIGHT = 30;
+const int SC_HEIGHT = 60;
 const size_t MEM_SIZE  = SC_WEIGHT * SC_HEIGHT;
 
 struct Processor
@@ -46,6 +46,12 @@ struct Processor
     size_t pc;
     stack_elem reg[REG_COUNT];
     stack_elem ram[MEM_SIZE];
+};
+
+enum ERRORS
+{
+    FILE_OPEN_CRUSH = 1235,
+
 };
 
 // struct File_names

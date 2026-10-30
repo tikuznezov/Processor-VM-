@@ -1,7 +1,9 @@
 IN ; input number
 POP ax
+
+PUSH 0
 PUSH ax
-OUT ; show input number
+JE :zero
 
 
 PUSH 1
@@ -31,3 +33,9 @@ CALL :1
 MUL
 
 RET
+
+
+:zero
+PUSH 1
+OUT
+HLT
